@@ -1,0 +1,2327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>젬 퍼즐</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0e1a;
+    --surface:  #111827;
+    --surface2: #1a2235;
+    --border:   #2a3a55;
+    --text:     #e8edf5;
+    --muted:    #6b7fa0;
+    --accent:   #00B4D8;
+    --c1:  #FF4D6D;
+    --c3:  #FFB703;
+    --c12: #00B4D8;
+    --c13: #0077B6;
+    --c14: #03045E;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 40px;
+  }
+
+  /* starfield */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,.25) 0%, transparent 100%),
+      radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 75% 55%, rgba(255,255,255,.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 35%, rgba(255,255,255,.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 20% 88%, rgba(255,255,255,.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 65% 80%, rgba(255,255,255,.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 45% 45%, rgba(255,255,255,.15) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page { position: relative; z-index: 1; width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 14px; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+  }
+  .logo span { color: var(--text); }
+  .logo-group { display: flex; flex-direction: column; gap: 2px; }
+  .daily-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .move-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .move-badge strong { color: var(--text); }
+
+  .canvas-wrap {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: #060b14;
+    box-shadow: 0 0 40px rgba(0,180,216,.08);
+    width: 100%;
+    aspect-ratio: 1 / 1;
+  }
+  #cv { display: block; cursor: grab; width: 100%; height: 100%; -webkit-tap-highlight-color: transparent; touch-action: none; user-select: none; }
+  #cv.panning { cursor: grabbing; }
+
+  #minimap {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 84px; height: 84px;
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 6px;
+    background: #E8DCC0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  #minimap.show { opacity: 1; }
+
+  /* 마우스 오버 칸 색 표시 (좌상단 고정): 정답색 + 현재 보석색 */
+  #hoverColor {
+    position: absolute;
+    top: 8px; left: 8px;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 11px;
+    background: rgba(6,11,20,0.82);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    pointer-events: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: #fff;
+    z-index: 5;
+  }
+  #hoverColor.show { display: flex; }
+  #hoverColor .hc-item { display: flex; align-items: center; gap: 5px; }
+  #hoverColor .hc-item.hidden { display: none; }
+  #hoverColor .hc-sw {
+    width: 17px; height: 17px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,0.4);
+    flex-shrink: 0;
+  }
+  #hoverColor .hc-lbl { font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 700; }
+  #hoverColor .hc-name { font-weight: 700; color: #fff; font-size: 13px; }
+  #hoverColor .hc-sep { width:1px; height:18px; background:rgba(255,255,255,0.15); }
+
+  .zoom-controls {
+    position: absolute;
+    left: 8px; bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .zoom-btn {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: rgba(17,24,39,0.85);
+    color: var(--text);
+    font-size: 18px;
+    font-family: 'Space Mono', monospace;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .zoom-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(17,24,39,0.95); }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .panel-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .buf-slots { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; padding-top: 6px; }
+  .bslot {
+    aspect-ratio: 1 / 1;
+    border-radius: 6px;
+    border: 1.5px dashed var(--border);
+    background: #E8DCC0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+  }
+  .bslot.filled { border-style: solid; border-color: var(--border); background: #E8DCC0; }
+  .bslot.locked {
+    background: rgba(255,255,255,0.03);
+    border: 1.5px dashed rgba(255,255,255,0.12);
+    color: var(--muted);
+    cursor: default;
+  }
+  .bslot.locked svg { width: 60%; height: 60%; }
+  .bslot.locked:hover { border-color: rgba(255,255,255,0.12); }
+  .bslot.sel-buf {
+    z-index: 2;
+  }
+  .bslot.sel-buf .gem-dot {
+    transform: translateY(-5px) scale(1.06);
+    box-shadow: 0 2px 2px rgba(0,0,0,0.35);
+  }
+  .bslot:hover { border-color: var(--accent); }
+  .bslot.just-unlocked {
+    animation: bufUnlock .9s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes bufUnlock {
+    0% { transform: scale(.4); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(0,180,216,.5); background: rgba(0,180,216,.3); }
+    50% { transform: scale(1.15); border-color: var(--accent); box-shadow: 0 0 12px 2px rgba(0,180,216,.6); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0,180,216,0); }
+  }
+  .gem-dot {
+    width: 78%; height: 78%;
+    image-rendering: auto;
+    transition: transform .15s, box-shadow .15s;
+  }
+  .gem-dot.white-gem {}
+
+  .legend-list { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  .legend-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); }
+  .legend-sq { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+  .leg-name { }
+  .leg-check { display: inline-flex; align-items: center; }
+  .legend-row.done .leg-name { color: var(--muted); text-decoration: line-through; }
+  .legend-row.done .legend-sq { opacity: 0.4; }
+
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  button:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+  button.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+  button.primary:hover { background: #00caf0; border-color: #00caf0; color: #000; }
+
+  .status {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--muted);
+    min-height: 20px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border-left: 2px solid var(--border);
+    border-radius: 0 6px 6px 0;
+    transition: border-color .2s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .status.active { border-color: var(--accent); color: var(--text); }
+  .status-swatch {
+    width: 16px; height: 16px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,0,0,.2);
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+  }
+  .status-color-name {
+    font-weight: 700;
+    color: var(--text);
+    flex-shrink: 0;
+  }
+  .status-text { color: inherit; }
+
+  /* clear overlay */
+  #clear-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(0,0,0,.75);
+    align-items: center; justify-content: center;
+  }
+  #clear-overlay.show { display: flex; }
+  .clear-box {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 40px 48px;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(0,180,216,.25);
+    animation: popIn .35s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes popIn { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .clear-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .clear-sub { font-size: 15px; color: var(--muted); margin-bottom: 24px; }
+  .clear-stats { display: flex; gap: 16px; justify-content: center; margin-bottom: 24px; }
+  .clear-stat {
+    background: var(--surface2, #1a2235);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 24px;
+    min-width: 90px;
+  }
+  .cs-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .cs-value { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: var(--accent); }
+
+  /* 메인 페이지 */
+  #main-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 300;
+    background: radial-gradient(circle at 50% 30%, #16233a, #0a1120 70%);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #main-overlay.show { display: flex; }
+  .main-box { text-align: center; max-width: 420px; width: 100%; }
+  .main-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 44px; font-weight: 700;
+    letter-spacing: -1px;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .main-logo span { color: var(--text); }
+  .main-tagline { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+  .main-art {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .main-art canvas {
+    width: 100%; aspect-ratio: 1/1;
+    border-radius: 10px;
+    background: #E8DCC0;
+    image-rendering: pixelated;
+    border: 1px solid var(--border);
+  }
+  .main-nick { margin-top: 16px; font-size: 13px; color: var(--muted); }
+  .main-nick span:hover { color: var(--accent); }
+
+  #nickname-popup {
+    display: none;
+    position: fixed; inset: 0; z-index: 400;
+    background: rgba(0,0,0,.7);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #nickname-popup.show { display: flex; }
+  .nick-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    width: 100%; max-width: 320px;
+    text-align: center;
+  }
+  .nick-title { font-family: 'Space Mono',monospace; font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .nick-desc { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .nick-input {
+    width: 100%; padding: 10px 14px;
+    background: var(--surface2,#1a2235);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text); font-size: 15px;
+    outline: none;
+  }
+  .nick-input:focus { border-color: var(--accent); }
+  .stage-best { font-size: 10px; color: var(--accent); margin-top: 2px; }
+  .main-start {
+    font-size: 16px;
+    padding: 14px 48px;
+    border-radius: 99px;
+  }
+
+  /* 난이도 선택 */
+  #diff-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 250;
+    background: rgba(0,0,0,.8);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #diff-overlay.show { display: flex; }
+  .diff-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%; max-width: 460px;
+  }
+  .diff-stage-name { text-align: center; font-size: 15px; color: var(--muted); margin: 8px 0 18px; }
+  .diff-cards { display: flex; flex-direction: column; gap: 12px; }
+  .diff-card {
+    background: var(--surface2, #1a2235);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+    cursor: pointer;
+    transition: border-color .15s, transform .1s;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .diff-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .diff-icon { font-size: 14px; letter-spacing: 2px; min-width: 48px; }
+  .diff-name { font-family: 'Space Mono', monospace; font-weight: 700; font-size: 16px; color: var(--text); min-width: 56px; }
+  .diff-desc { font-size: 12px; color: var(--muted); }
+
+  .hint-txt {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: 8px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 16px 10px 30px; }
+    .logo { font-size: 18px; }
+    .buf-slots { gap: 4px; }
+  }
+
+  button.ghost {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  button.ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  #stage-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.8);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #stage-overlay.show { display: flex; }
+  .stage-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%; max-width: 560px;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; position: sticky; top: 0; background: var(--surface); padding-bottom: 10px; z-index: 1; }
+  .stage-title { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700; color: var(--accent); }
+  .stage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+  .stage-card {
+    background: var(--surface2, #1a2235);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px;
+    cursor: pointer;
+    transition: border-color .15s, transform .1s;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .stage-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .stage-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .stage-card canvas { width: 96px; height: 96px; border-radius: 8px; background: #E8DCC0; image-rendering: pixelated; }
+  .stage-card .nm { font-size: 13px; color: var(--text); }
+  .stage-card .done-badge { font-size: 11px; color: #38B000; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="logo-group">
+      <div class="logo">GEM<span>PUZZLE</span></div>
+      <div class="daily-label" id="stageLabel">스테이지</div>
+    </div>
+    <div class="header-right">
+      <span class="move-badge">⏱ <strong id="tc">0:00</strong></span>
+      <span class="move-badge">이동 <strong id="mc">0</strong>회</span>
+      <button class="ghost" onclick="goMain()">메인으로</button>
+      <button class="primary" onclick="resetGame()">다시 시작</button>
+    </div>
+  </header>
+
+  <div class="canvas-wrap">
+    <canvas id="cv" width="768" height="768"></canvas>
+    <canvas id="minimap" width="96" height="96"></canvas>
+    <div id="hoverColor">
+      <div class="hc-item hc-answer"><span class="hc-sw"></span><span class="hc-lbl">정답</span><span class="hc-name"></span></div>
+      <div class="hc-item hc-current"><span class="hc-sw"></span><span class="hc-lbl">현재</span><span class="hc-name"></span></div>
+    </div>
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="zoomOut" aria-label="축소">−</button>
+      <button class="zoom-btn" id="zoomReset" aria-label="전체 보기">⤢</button>
+      <button class="zoom-btn" id="zoomIn" aria-label="확대">+</button>
+    </div>
+  </div>
+
+  <div class="status" id="sbar">칸을 클릭해 보석을 선택하세요</div>
+
+  <div class="panel">
+    <div class="panel-title">버퍼</div>
+    <div class="buf-slots" id="bslots"></div>
+    <div class="hint-txt">보석 선택 후 빈 슬롯 클릭 → 버퍼 보관 · 버퍼 보석 클릭 → 빈 칸에 배치<br>🔒 칸은 한 색을 완성할 때마다 3칸씩 열려요</div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">색상</div>
+    <div class="legend-list" id="leglist"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">조작법</div>
+    <div class="hint-txt">
+      같은 색 + 인접한 보석은 덩어리로 한 번에 선택돼요<br>
+      목적지를 클릭하면 정답 색과 일치하는 보석만 이동해요<br>
+      정답에 맞은 보석(꽉 찬 칸)은 더 이상 선택되지 않아요
+    </div>
+  </div>
+</div>
+
+<div id="clear-overlay">
+  <div class="clear-box">
+    <div class="clear-title">CLEAR!</div>
+    <div class="clear-sub">모든 보석이 제자리를 찾았어요</div>
+    <div class="clear-stats">
+      <div class="clear-stat"><div class="cs-label">시간</div><div class="cs-value" id="clear-time">0:00</div></div>
+      <div class="clear-stat"><div class="cs-label">이동</div><div class="cs-value" id="clear-moves">0회</div></div>
+    </div>
+    <div id="clear-best" style="font-size:13px;color:var(--muted);margin-bottom:16px;min-height:18px;"></div>
+    <div style="display:flex;gap:8px;justify-content:center;">
+      <button class="ghost" onclick="document.getElementById('clear-overlay').classList.remove('show');openStageSelect()">스테이지 목록</button>
+      <button class="primary" onclick="resetGame();document.getElementById('clear-overlay').classList.remove('show')">다시 도전</button>
+    </div>
+  </div>
+</div>
+
+<div id="stage-overlay">
+  <div class="stage-box">
+    <div class="stage-head">
+      <div class="stage-title">스테이지 선택</div>
+      <button class="ghost" id="stageBack">← 메인</button>
+    </div>
+    <div class="stage-grid" id="stageGrid"></div>
+  </div>
+</div>
+
+<div id="main-overlay">
+  <div class="main-box">
+    <div class="main-logo">GEM<span>PUZZLE</span></div>
+    <div class="main-tagline">흩어진 보석을 옮겨 그림을 완성하세요</div>
+    <div class="main-art" id="mainArt"></div>
+    <button class="primary main-start" onclick="openStageSelect()">시작하기</button>
+    <div class="main-nick">
+      <span id="nicknameDisplay" onclick="openNicknamePopup()" style="cursor:pointer;">닉네임 설정</span>
+    </div>
+  </div>
+</div>
+
+<div id="nickname-popup">
+  <div class="nick-box">
+    <div class="nick-title">닉네임 설정</div>
+    <div class="nick-desc">같은 기기에서 자동으로 기억됩니다</div>
+    <input id="nickInput" class="nick-input" type="text" maxlength="12" placeholder="닉네임 입력 (최대 12자)">
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;">
+      <button class="ghost" id="nickCancel">취소</button>
+      <button class="primary" onclick="submitNickname()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="diff-overlay">
+  <div class="diff-box">
+    <div class="stage-head">
+      <div class="stage-title">난이도 선택</div>
+      <button class="ghost" id="diffBack">← 스테이지</button>
+    </div>
+    <div class="diff-stage-name">「<span id="diff-stage-name">로켓</span>」</div>
+    <div class="diff-cards">
+      <div class="diff-card" data-diff="1">
+        <div class="diff-icon" style="color:#38B000">●</div>
+        <div class="diff-name">쉬움</div>
+        <div class="diff-desc">색이 큰 덩어리로 모여 있어요</div>
+      </div>
+      <div class="diff-card" data-diff="2">
+        <div class="diff-icon" style="color:#FFB703">●●</div>
+        <div class="diff-name">보통</div>
+        <div class="diff-desc">색이 적당히 흩어져 있어요</div>
+      </div>
+      <div class="diff-card" data-diff="3">
+        <div class="diff-icon" style="color:#FF4D6D">●●●</div>
+        <div class="diff-name">어려움</div>
+        <div class="diff-desc">색이 판 곳곳에 흩뿌려져 있어요</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="stages.js"></script>
+<script>
+// 그리드 크기는 스테이지마다 가변 (32x32 또는 48x48 등)
+// GRID_SIZE(512, 화면상 그림 크기)는 고정, SZ = GRID_SIZE/COLS 로 계산
+let SZ=16, COLS=32, ROWS=32;
+const GRID_PX=512; // 화면상 그림이 차지하는 픽셀 (고정)
+function applyStageSize(grid){
+  ROWS=grid.length;
+  COLS=grid[0].length;
+  SZ=GRID_PX/COLS; // 셀 픽셀 크기 (열 수에 맞춰 자동)
+}
+const PAL={0:null,1:'#FF4D6D',2:'#C9184A',3:'#7A1030',4:'#FF9500',5:'#E85D00',6:'#A64F00',7:'#FFF44F',8:'#FFC400',9:'#D4A373',10:'#8DEB00',11:'#2E9E00',12:'#0A6E33',13:'#1FC3F0',14:'#0062D6',15:'#03045E',16:'#E0179E',17:'#7B2FD6',18:'#3F37C9',19:'#EAD0A8',20:'#9C6B3D',21:'#5A3A28',22:'#FFC6FF',23:'#FF9EB8',24:'#E81E63',25:'#FFFFFF',26:'#8D99AE',27:'#1A1A1A'};
+const CNAME={1:'밝은빨강',2:'빨강',3:'진빨강',4:'귤색',5:'주황',6:'갈주황',7:'레몬',8:'노랑',9:'토스트',10:'라임',11:'초록',12:'딥그린',13:'하늘',14:'파랑',15:'네이비',16:'난초',17:'보라',18:'미드나잇',19:'베이지',20:'갈색',21:'다크초코',22:'베이비핑크',23:'분홍',24:'진분홍',25:'흰색',26:'회색',27:'검정'};
+
+// STAGE_LIST is loaded from stages.js
+// 현재 스테이지의 정답판 (선택 시 설정됨)
+let currentStage=0;
+let currentDifficulty=1; // 1=쉬움, 2=보통, 3=어려움
+let ANS=STAGE_LIST[0].grid;
+applyStageSize(ANS);
+
+function activeCells(){
+  const a=[];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++)if(ANS[r][c]!==0)a.push({r,c});
+  return a;
+}
+
+function canSelect(r,c,gems){
+  const k=r+'_'+c;
+  return ANS[r][c]!==0&&gems[k]!==undefined&&gems[k]!==ANS[r][c];
+}
+
+function getCluster(sr,sc,gems){
+  if(!canSelect(sr,sc,gems))return[];
+  const targetColor=gems[sr+'_'+sc];
+  const visited=new Set();
+  const queue=[{r:sr,c:sc}];
+  visited.add(sr+'_'+sc);
+  const dirs=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+  while(queue.length){
+    const {r,c}=queue.shift();
+    for(const [dr,dc] of dirs){
+      const nr=r+dr,nc=c+dc,nk=nr+'_'+nc;
+      if(nr<0||nr>=ROWS||nc<0||nc>=COLS||visited.has(nk))continue;
+      if(canSelect(nr,nc,gems)&&gems[nk]===targetColor){
+        visited.add(nk);queue.push({r:nr,c:nc});
+      }
+    }
+  }
+  return [...visited].map(k=>{const[r,c]=k.split('_').map(Number);return{r,c};});
+}
+
+function getEmptyCluster(sr,sc){
+  if(ANS[sr][sc]===0||gems[sr+'_'+sc]!==undefined)return[];
+  const visited=new Set();
+  const queue=[{r:sr,c:sc}];
+  visited.add(sr+'_'+sc);
+  const dirs=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+  const result=[];
+  while(queue.length){
+    const {r,c}=queue.shift();
+    result.push({r,c});
+    for(const [dr,dc] of dirs){
+      const nr=r+dr,nc=c+dc,nk=nr+'_'+nc;
+      if(nr<0||nr>=ROWS||nc<0||nc>=COLS||visited.has(nk))continue;
+      if(ANS[nr][nc]!==0&&gems[nk]===undefined){visited.add(nk);queue.push({r:nr,c:nc});}
+    }
+  }
+  return result;
+}
+
+let gems,selected,selCluster,buf,moves,selBufIndices,bufSize,completedColors;
+const stageCleared=new Set(); // 클리어한 스테이지 인덱스 (세션)
+
+// ===== Play Board Generation (blob-based scramble) =====
+const DIRS8=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+
+function inBounds(r,c){return r>=0&&r<ROWS&&c>=0&&c<COLS;}
+function isActive(r,c){return inBounds(r,c)&&ANS[r][c]!==0;}
+
+// Step 2: 색깔별 개수
+function countColors(){
+  const cnt={};
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const v=ANS[r][c];
+    if(v!==0)cnt[v]=(cnt[v]||0)+1;
+  }
+  return cnt;
+}
+
+// Step 3 (방식 B): 정답 보드의 같은 색 연결요소(영역) 검출 → 각 셀에 region id 부여
+function buildRegions(){
+  const regionOf={};
+  let rid=0;
+  const regions=[];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(ANS[r][c]===0)continue;
+    const k=r+'_'+c;
+    if(regionOf[k]!==undefined)continue;
+    const color=ANS[r][c];
+    const cells=[];
+    const q=[{r,c}];regionOf[k]=rid;
+    while(q.length){
+      const {r:cr,c:cc}=q.shift();
+      cells.push({r:cr,c:cc});
+      for(const [dr,dc] of DIRS8){
+        const nr=cr+dr,nc=cc+dc,nk=nr+'_'+nc;
+        if(!isActive(nr,nc)||regionOf[nk]!==undefined)continue;
+        if(ANS[nr][nc]===color){regionOf[nk]=rid;q.push({r:nr,c:nc});}
+      }
+    }
+    regions.push({id:rid,color,cells,cx:cells.reduce((s,x)=>s+x.c,0)/cells.length,cy:cells.reduce((s,x)=>s+x.r,0)/cells.length});
+    rid++;
+  }
+  return {regionOf,regions};
+}
+
+// Step 4: 색을 적당한 크기의 blob들로 쪼갬
+function splitColorsIntoBlobs(colorCounts){
+  // 색별 blob 목록 생성
+  const byColor={};
+  for(const colorStr in colorCounts){
+    const color=Number(colorStr);
+    let remain=colorCounts[color];
+    byColor[color]=[];
+    while(remain>0){
+      let size;
+      if(remain<=8){size=remain;}
+      else{size=Math.min(remain,8+Math.floor(rng()*9));} // 8~16
+      byColor[color].push({color,size});
+      remain-=size;
+    }
+    // 각 색 내에서는 큰 blob부터
+    byColor[color].sort((a,b)=>b.size-a.size);
+  }
+  // 라운드로빈: 색을 번갈아 배치 → 판 전체에 색이 골고루 퍼짐
+  const colors=Object.keys(byColor);
+  const blobs=[];
+  let added=true;
+  while(added){
+    added=false;
+    for(const col of colors){
+      if(byColor[col].length){
+        blobs.push(byColor[col].shift());
+        added=true;
+      }
+    }
+  }
+  return blobs;
+}
+
+// 셀 배치 점수: 같은 색 인접 보너스(강화), 정답위치 페널티(약화), 고립 페널티
+function placeScore(play,r,c,color){
+  let score=0;
+  let sameNeighbor=0;
+  for(const [dr,dc] of DIRS8){
+    const nr=r+dr,nc=c+dc,nk=nr+'_'+nc;
+    if(play[nk]===color)sameNeighbor++;
+  }
+  score+=sameNeighbor*5;                      // 같은 색 인접 보너스 강화 (3→5)
+  if(ANS[r][c]===color)score-=3;              // 정답 위치 페널티 완화 (5→3)
+  if(sameNeighbor===0)score-=3;               // 고립 페널티
+  return score;
+}
+
+// Step 6: BFS 시드 확장으로 blob 배치
+function placeBlob(play,assigned,blob){
+  const free=[];
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    if(ANS[r][c]===0)continue;
+    const k=r+'_'+c;
+    if(assigned[k])continue;
+    free.push({r,c,k});
+  }
+  if(free.length===0)return 0;
+
+  // 시드 선택: 이미 배치된 같은 색 인접 빈 칸 우선 → 색끼리 더 잘 뭉침
+  // 없으면 정답색이 다른 칸, 없으면 아무 칸
+  const adjSame=free.filter(({r,c})=>{
+    if(ANS[r][c]===blob.color)return false; // 정답 위치 피함
+    for(const [dr,dc] of DIRS8){const nk=(r+dr)+'_'+(c+dc);if(play[nk]===blob.color)return true;}
+    return false;
+  });
+  let seedPool=adjSame.length?adjSame:free.filter(({r,c})=>ANS[r][c]!==blob.color);
+  if(seedPool.length===0)seedPool=free;
+  const seed=seedPool[Math.floor(rng()*seedPool.length)];
+
+  const placed=[];
+  const frontier=[seed];
+  const inFrontier=new Set([seed.k]);
+  while(placed.length<blob.size&&frontier.length>0){
+    // 점수 가장 높은 frontier 셀 선택
+    let bestI=0,bestScore=-Infinity;
+    for(let i=0;i<frontier.length;i++){
+      const f=frontier[i];
+      const s=placeScore(play,f.r,f.c,blob.color);
+      if(s>bestScore){bestScore=s;bestI=i;}
+    }
+    const cell=frontier.splice(bestI,1)[0];
+    inFrontier.delete(cell.k);
+    if(assigned[cell.k])continue;
+    play[cell.k]=blob.color;assigned[cell.k]=true;
+    placed.push(cell);
+    for(const [dr,dc] of DIRS8){
+      const nr=cell.r+dr,nc=cell.c+dc,nk=nr+'_'+nc;
+      if(!isActive(nr,nc)||assigned[nk]||inFrontier.has(nk))continue;
+      frontier.push({r:nr,c:nc,k:nk});inFrontier.add(nk);
+    }
+  }
+  return placed.length;
+}
+
+// Step 8: 색 개수 보정 (overused → underused 색으로 swap)
+function repairCounts(play,colorCounts){
+  const cur={};
+  for(const k in play){const v=play[k];cur[v]=(cur[v]||0)+1;}
+  for(const colorStr in colorCounts){
+    const color=Number(colorStr);
+    const want=colorCounts[color];
+    let have=cur[color]||0;
+    while(have<want){
+      // 과잉 색 찾아서 이 색으로 교체
+      let overColor=null;
+      for(const oc in cur){if(cur[oc]>(colorCounts[oc]||0)){overColor=Number(oc);break;}}
+      if(overColor===null)break;
+      // overColor 셀 하나 골라 color로 (정답위치 피해서)
+      let target=null,fallback=null;
+      for(const k in play){
+        if(play[k]!==overColor)continue;
+        const [r,c]=k.split('_').map(Number);
+        if(ANS[r][c]!==color){target=k;break;}
+        fallback=k;
+      }
+      const pick=target||fallback;
+      if(pick===null)break;
+      play[pick]=color;
+      cur[overColor]--;cur[color]=(cur[color]||0)+1;have++;
+    }
+  }
+}
+
+// Step 9: 정답 일치 셀 줄이기 (local swap)
+function reduceMatched(play){
+  const keys=Object.keys(play);
+  const matched=()=>keys.filter(k=>{const[r,c]=k.split('_').map(Number);return play[k]===ANS[r][c];});
+  let m=matched();
+  let pass=0;
+  while(m.length>0&&pass<6){
+    let improved=false;
+    for(const ka of m){
+      const [ra,ca]=ka.split('_').map(Number);
+      const colA=play[ka];
+      // colA를 받아도 정답이 안 되는 셀 B 찾기 (그리고 B의 색이 A에 와도 정답 아님)
+      for(const kb of keys){
+        if(kb===ka)continue;
+        const [rb,cb]=kb.split('_').map(Number);
+        const colB=play[kb];
+        if(colA===colB)continue;
+        // swap 후 둘 다 정답이 아니면 좋음
+        const aOk=(colB!==ANS[ra][ca]); // A자리에 colB
+        const bOk=(colA!==ANS[rb][cb]); // B자리에 colA
+        if(aOk&&bOk){
+          play[ka]=colB;play[kb]=colA;
+          improved=true;break;
+        }
+      }
+    }
+    m=matched();pass++;
+    if(!improved)break;
+  }
+}
+
+// Step 10: 고립 픽셀 제거 — 여러 패스 반복, 주변 다수 색으로 흡수
+function removeIsolated(play){
+  const MAX_PASS=5;
+  for(let pass=0;pass<MAX_PASS;pass++){
+    let changed=false;
+    const keys=Object.keys(play);
+    for(const k of keys){
+      const [r,c]=k.split('_').map(Number);
+      const color=play[k];
+      // 8방향 같은 색 이웃 수
+      let same=0;
+      for(const [dr,dc] of DIRS8){if(play[(r+dr)+'_'+(c+dc)]===color)same++;}
+      if(same>0)continue; // 고립 아님
+
+      // 주변 색 빈도 집계
+      const freq={};
+      for(const [dr,dc] of DIRS8){
+        const nk=(r+dr)+'_'+(c+dc);
+        if(play[nk]!==undefined)freq[play[nk]]=(freq[play[nk]]||0)+1;
+      }
+      // 가장 많은 색으로 흡수 (정답 위치 페널티 고려)
+      const candidates=Object.keys(freq).map(Number)
+        .filter(col=>col!==color)
+        .sort((a,b)=>{
+          const scoreA=freq[b]-(ANS[r][c]===b?2:0);
+          const scoreB=freq[a]-(ANS[r][c]===a?2:0);
+          return scoreA-scoreB;
+        });
+      if(candidates.length>0){
+        play[k]=candidates[0];
+        changed=true;
+      }
+    }
+    if(!changed)break;
+  }
+}
+
+// 메인: 정답 영역(region)을 단일 잘못된 색으로 채우는 방식
+function generatePlayBoard(){
+  const colorCounts=countColors();      // 색별 필요 개수 (정답 보드 기준)
+  const play={};
+  const {regions}=buildRegions();       // 정답 색 연결 영역들
+
+  // 남은 색 재고 (이 만큼씩 배치해야 정답과 개수 일치)
+  const stock={};
+  for(const k in colorCounts)stock[Number(k)]=colorCounts[k];
+
+  // 영역을 큰 것부터 처리 (큰 영역에 단일 색을 우선 배정)
+  const ordered=regions.slice().sort((a,b)=>b.cells.length-a.cells.length);
+
+  // 각 영역을 채우기: "그 영역의 정답 색이 아니면서 재고가 가장 많은 색"을 골라
+  // 영역 셀을 가능한 만큼 그 색으로 채움. 모자라면 다음으로 재고 많은 색으로 이어 채움.
+  for(const region of ordered){
+    const ansColor=region.color;
+    // 영역 셀을 BFS 순서(인접 우선)로 정렬 → 같은 색이 영역 안에서 뭉쳐 들어감
+    const cells=orderCellsByAdjacency(region.cells);
+    let idx=0;
+    while(idx<cells.length){
+      // 정답색(ansColor)이 아니고 재고>0인 색 중 재고 가장 많은 색
+      let pick=-1,pickStock=0;
+      for(const colStr in stock){
+        const col=Number(colStr);
+        if(col===ansColor)continue;
+        if(stock[col]>pickStock){pickStock=stock[col];pick=col;}
+      }
+      if(pick<0){
+        // 정답색 말고 남은 게 없음 → 어쩔 수 없이 정답색이라도(거의 없음)
+        for(const colStr in stock){const col=Number(colStr);if(stock[col]>0){pick=col;break;}}
+        if(pick<0)break;
+      }
+      // 이 색으로 채울 수 있는 만큼 (영역 남은 칸 vs 재고)
+      const fillN=Math.min(cells.length-idx, stock[pick]);
+      for(let i=0;i<fillN;i++){
+        const {r,c}=cells[idx++];
+        play[r+'_'+c]=pick;
+      }
+      stock[pick]-=fillN;
+    }
+  }
+
+  // 색 개수 정확히 보정 (영역 경계에서 생긴 오차 흡수)
+  repairCounts(play,colorCounts);
+  // 난이도에 따라 색을 흩뿌림 (1=뭉침 유지, 높을수록 흩어짐)
+  scatterByDifficulty(play);
+  // 정답 위치에 우연히 맞은 칸을 줄임
+  reduceMatched(play);
+  repairCounts(play,colorCounts);
+
+  return play;
+}
+
+// 난이도별 흩뿌리기: 보석 쌍을 무작위로 swap해서 같은 색 덩어리를 흩어지게 함
+// 난이도 1=흩뿌림 없음, 2=중간, 3=많이. swap이라 색 개수는 보존됨.
+function scatterByDifficulty(play){
+  const ratioMap={1:0, 2:0.18, 3:0.45}; // 활성 칸 대비 swap 횟수 비율
+  const ratio=ratioMap[currentDifficulty]||0;
+  if(ratio<=0)return;
+  const keys=Object.keys(play);
+  const swaps=Math.floor(keys.length*ratio);
+  for(let i=0;i<swaps;i++){
+    const a=keys[Math.floor(rng()*keys.length)];
+    const b=keys[Math.floor(rng()*keys.length)];
+    if(a===b)continue;
+    // 정답 위치를 새로 만들지 않는 swap만 (너무 쉬워지는 것 방지)
+    const [ar,ac]=a.split('_').map(Number);
+    const [br,bc]=b.split('_').map(Number);
+    if(play[b]===ANS[ar][ac]||play[a]===ANS[br][bc])continue;
+    const t=play[a];play[a]=play[b];play[b]=t;
+  }
+}
+
+// 영역 셀들을 인접 우선(BFS) 순서로 정렬 → 한 색이 연속으로 들어가 영역 안에서 뭉침
+function orderCellsByAdjacency(cells){
+  if(cells.length<=1)return cells.slice();
+  const set=new Set(cells.map(({r,c})=>r+'_'+c));
+  const visited=new Set();
+  const ordered=[];
+  // 시작점: 첫 셀
+  const start=cells[0];
+  const q=[start];visited.add(start.r+'_'+start.c);
+  while(q.length){
+    const cell=q.shift();
+    ordered.push(cell);
+    for(const [dr,dc] of DIRS8){
+      const nr=cell.r+dr,nc=cell.c+dc,nk=nr+'_'+nc;
+      if(set.has(nk)&&!visited.has(nk)){visited.add(nk);q.push({r:nr,c:nc});}
+    }
+  }
+  // 혹시 BFS로 안 닿은 셀(영역이 8방향 비연결인 경우)도 추가
+  for(const cell of cells){if(!visited.has(cell.r+'_'+cell.c))ordered.push(cell);}
+  return ordered;
+}
+
+// ===== 시드 기반 난수 (오늘의 퍼즐) =====
+// mulberry32 PRNG
+let _rngState=1;
+function rng(){
+  _rngState|=0; _rngState=(_rngState+0x6D2B79F5)|0;
+  let t=Math.imul(_rngState^(_rngState>>>15),1|_rngState);
+  t=(t+Math.imul(t^(t>>>7),61|t))^t;
+  return ((t^(t>>>14))>>>0)/4294967296;
+}
+function seedRng(seed){_rngState=seed>>>0;}
+
+function shuffleGems(){
+  // 스테이지+난이도별 고정 시드 → 같은 조합은 항상 동일 배치
+  seedRng(1000+currentStage*7919+currentDifficulty*104729);
+  let best=null,bestMatched=Infinity;
+  const active=activeCells();
+  for(let attempt=0;attempt<5;attempt++){
+    const play=generatePlayBoard();
+    let matched=0;
+    active.forEach(({r,c})=>{if(play[r+'_'+c]===ANS[r][c])matched++;});
+    if(matched<bestMatched){bestMatched=matched;best=play;}
+    if(matched<=active.length*0.05)break; // 5% 이하면 충분
+  }
+  return best;
+}
+
+function resetGame(){
+  gems=shuffleGems();
+  selected=null;selCluster=null;buf=[];moves=0;selBufIndices=[];
+  bufSize=12;           // 시작 버퍼 12칸
+  completedColors=new Set();
+  particles=[];sparkles=[];fireworksAnimating=false;sparkleAnimating=false;
+  document.getElementById('mc').textContent='0';
+  setStatus('칸을 클릭해 보석을 선택하세요',false);
+  renderBuf();draw();
+  if(typeof renderLegend==='function')renderLegend();
+  startTimer();
+}
+
+// ===== 클리어 타이머 =====
+let timerStart=0, timerId=null, timerElapsed=0;
+function fmtTime(ms){
+  const s=Math.floor(ms/1000);
+  const m=Math.floor(s/60);
+  return m+':'+String(s%60).padStart(2,'0');
+}
+function startTimer(){
+  timerStart=performance.now();
+  timerElapsed=0;
+  if(timerId)clearInterval(timerId);
+  document.getElementById('tc').textContent='0:00';
+  timerId=setInterval(()=>{
+    timerElapsed=performance.now()-timerStart;
+    document.getElementById('tc').textContent=fmtTime(timerElapsed);
+  },500);
+}
+function stopTimer(){
+  if(timerId){clearInterval(timerId);timerId=null;}
+  timerElapsed=performance.now()-timerStart;
+  return timerElapsed;
+}
+
+// 한 색의 모든 보석이 정답 칸에 들어갔는지 검사 → 새로 완성된 색마다 버퍼 +1
+function checkColorCompletion(){
+  const colorCells={};   // color -> {total, matched}
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const ans=ANS[r][c];
+    if(ans===0)continue;
+    if(!colorCells[ans])colorCells[ans]={total:0,matched:0};
+    colorCells[ans].total++;
+    if(gems[r+'_'+c]===ans)colorCells[ans].matched++;
+  }
+  let newlyDone=0;
+  const doneCells=[]; // 새로 완성된 색의 칸들
+  for(const col in colorCells){
+    const {total,matched}=colorCells[col];
+    if(matched===total&&!completedColors.has(col)){
+      completedColors.add(col);
+      bufSize+=3;         // 색 완성마다 버퍼 3칸 확장
+      newlyDone++;
+      // 이 색의 모든 칸 좌표 수집
+      for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+        if(ANS[r][c]===Number(col))doneCells.push({r,c});
+      }
+    }
+  }
+  if(newlyDone>0){
+    const prevBuf=bufSize-3*newlyDone;
+    bufSize=Math.min(bufSize,30);   // 최대 30칸
+    startSparkle(doneCells);        // 완성 영역 반짝임
+    renderBuf();
+    unlockBufferAnim(prevBuf, bufSize); // 새로 열린 버퍼 칸 등장 효과
+    renderLegend();
+    setStatus(`색 완성! 버퍼가 ${bufSize}칸으로 늘었어요`,true);
+  }
+}
+
+// ===== 색 완성 반짝임 애니메이션 =====
+let sparkles=[]; // {r,c,start}
+let sparkleAnimating=false;
+const SPARKLE_DUR=700;
+function startSparkle(cells){
+  const now=performance.now();
+  cells.forEach((cell,i)=>{
+    sparkles.push({r:cell.r,c:cell.c,start:now+i*8}); // 살짝 물결치듯
+  });
+  if(!sparkleAnimating){sparkleAnimating=true;requestAnimationFrame(sparkleLoop);}
+}
+function sparkleLoop(now){
+  sparkles=sparkles.filter(s=>(now-s.start)<SPARKLE_DUR);
+  draw();
+  if(sparkles.length){requestAnimationFrame(sparkleLoop);}
+  else{sparkleAnimating=false;draw();}
+}
+function drawSparkles(now){
+  for(const s of sparkles){
+    const t=(now-s.start)/SPARKLE_DUR;
+    if(t<0||t>1)continue;
+    const x=s.c*SZ+GRID_OFFSET, y=s.r*SZ+GRID_OFFSET;
+    // 밝은 흰빛이 차올랐다 사라짐 (sin 곡선)
+    const a=Math.sin(t*Math.PI)*0.85;
+    ctx.fillStyle='rgba(255,255,255,'+a+')';
+    ctx.fillRect(x,y,SZ,SZ);
+    // 가운데 작은 반짝 별
+    if(t<0.5){
+      const sa=Math.sin(t*Math.PI*2)*0.9;
+      ctx.fillStyle='rgba(255,255,255,'+sa+')';
+      const cx=x+SZ/2, cy=y+SZ/2, rs=SZ*0.18;
+      ctx.fillRect(cx-rs,cy-1,rs*2,2);
+      ctx.fillRect(cx-1,cy-rs,2,rs*2);
+    }
+  }
+}
+
+// 새로 열린 버퍼 칸 등장 애니메이션 (CSS 클래스 부여)
+function unlockBufferAnim(fromIdx, toIdx){
+  // renderBuf 후 호출됨 — 새로 열린 인덱스 슬롯에 펄스 클래스
+  const slots=document.querySelectorAll('#bslots .bslot');
+  for(let i=fromIdx;i<toIdx;i++){
+    if(slots[i]){
+      slots[i].classList.add('just-unlocked');
+      setTimeout(((el)=>()=>el.classList.remove('just-unlocked'))(slots[i]),900);
+    }
+  }
+}
+
+const cv=document.getElementById('cv');
+const ctx=cv.getContext('2d');
+
+function hexRgb(h){
+  return{r:parseInt(h.slice(1,3),16),g:parseInt(h.slice(3,5),16),b:parseInt(h.slice(5,7),16)};
+}
+
+// 정답 슬롯 바닥(빈 홈)용: 정답 색을 가라앉혀 "파인 홈" 느낌
+// 밝은 색은 어둡게, 어두운 색은 (너무 까매지지 않게) 살짝만 어둡게 처리
+function slotFloor(colorId){
+  const {r,g,b}=hexRgb(PAL[colorId]);
+  // 색의 밝기(0~255)
+  const lum=0.299*r+0.587*g+0.114*b;
+  let t, target;
+  if(lum<70){
+    // 어두운 색(검정/네이비/딥그린 등): 회색 쪽으로 살짝 밝혀 보석과 구분
+    target=[90,90,95]; t=0.5;
+  }else{
+    // 밝은/중간 색: 어둡게 가라앉혀 파인 홈 느낌
+    target=[20,20,20]; t=0.45;
+  }
+  const mix=(c,d)=>Math.round(c*(1-t)+d*t);
+  return `rgb(${mix(r,target[0])},${mix(g,target[1])},${mix(b,target[2])})`;
+}
+
+// 임의의 캔버스 컨텍스트에 보드와 동일한 facet 보석을 그림 (버퍼 슬롯용)
+function drawGemTo(c2,size,colorId){
+  const hex=PAL[colorId];
+  if(!hex)return;
+  const ps=size;
+  c2.clearRect(0,0,size,size);
+  c2.fillStyle=hex;
+  c2.fillRect(0,0,ps,ps);
+  const bevel=Math.max(2,Math.round(ps*0.22));
+  // 상단(밝음)
+  c2.fillStyle='rgba(255,255,255,0.45)';
+  c2.beginPath();c2.moveTo(0,0);c2.lineTo(ps,0);c2.lineTo(ps-bevel,bevel);c2.lineTo(bevel,bevel);c2.closePath();c2.fill();
+  // 좌측(약한 빛)
+  c2.fillStyle='rgba(255,255,255,0.22)';
+  c2.beginPath();c2.moveTo(0,0);c2.lineTo(bevel,bevel);c2.lineTo(bevel,ps-bevel);c2.lineTo(0,ps);c2.closePath();c2.fill();
+  // 하단(그늘)
+  c2.fillStyle='rgba(0,0,0,0.28)';
+  c2.beginPath();c2.moveTo(0,ps);c2.lineTo(bevel,ps-bevel);c2.lineTo(ps-bevel,ps-bevel);c2.lineTo(ps,ps);c2.closePath();c2.fill();
+  // 우측(강한 그늘)
+  c2.fillStyle='rgba(0,0,0,0.18)';
+  c2.beginPath();c2.moveTo(ps,0);c2.lineTo(ps,ps);c2.lineTo(ps-bevel,ps-bevel);c2.lineTo(ps-bevel,bevel);c2.closePath();c2.fill();
+  // 반짝임
+  c2.fillStyle='rgba(255,255,255,0.7)';
+  const sp=Math.max(1,Math.round(ps*0.12));
+  c2.fillRect(bevel+1,bevel+1,sp,sp);
+  // 외곽선
+  c2.strokeStyle=colorId===24?'rgba(0,0,0,0.45)':'rgba(0,0,0,0.3)';
+  c2.lineWidth=Math.max(0.8,ps*0.05);
+  c2.strokeRect(0.5,0.5,ps-1,ps-1);
+}
+
+function drawGem(x,y,colorId,ring,matched){
+  const hex=PAL[colorId];
+  if(!hex)return;
+  // 선택된 보석은 살짝 들어올림 (색에 의존하지 않는 표시)
+  const lift=ring?Math.max(2,SZ*0.22):0;
+  // 완성=칸을 꽉 / 미완성=안쪽으로 살짝 작게(바닥 정답색 테두리 보임) — 셀 크기 비례
+  const inset=matched?0:Math.max(1.5,SZ*0.19);
+  const px=x+inset, py=y+inset-lift, ps=SZ-inset*2;
+  if(ring){
+    // 들어올린 보석 바로 아래에 붙는 얇은 그림자
+    const shY=py+ps;                 // 보석 아랫변
+    const shH=Math.max(1.5,SZ*0.14); // 얇게
+    ctx.fillStyle='rgba(0,0,0,0.28)';
+    ctx.fillRect(px+1, shY, ps-2, shH);
+  }
+  // 베이스 면
+  ctx.fillStyle=hex;
+  ctx.fillRect(px,py,ps,ps);
+
+  // 보석 컷(facet): 모서리를 깎은 듯한 빛/그림자 면
+  const bevel=Math.max(2,Math.round(ps*0.22));
+  const L='rgba(255,255,255,0.45)';  // 빛 받는 면
+  const D='rgba(0,0,0,0.28)';        // 그늘 면
+  // 상단 면(밝음)
+  ctx.fillStyle=L;
+  ctx.beginPath();
+  ctx.moveTo(px,py);ctx.lineTo(px+ps,py);ctx.lineTo(px+ps-bevel,py+bevel);ctx.lineTo(px+bevel,py+bevel);
+  ctx.closePath();ctx.fill();
+  // 좌측 면(약한 빛)
+  ctx.fillStyle='rgba(255,255,255,0.22)';
+  ctx.beginPath();
+  ctx.moveTo(px,py);ctx.lineTo(px+bevel,py+bevel);ctx.lineTo(px+bevel,py+ps-bevel);ctx.lineTo(px,py+ps);
+  ctx.closePath();ctx.fill();
+  // 하단 면(그늘)
+  ctx.fillStyle=D;
+  ctx.beginPath();
+  ctx.moveTo(px,py+ps);ctx.lineTo(px+bevel,py+ps-bevel);ctx.lineTo(px+ps-bevel,py+ps-bevel);ctx.lineTo(px+ps,py+ps);
+  ctx.closePath();ctx.fill();
+  // 우측 면(강한 그늘)
+  ctx.fillStyle='rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.moveTo(px+ps,py);ctx.lineTo(px+ps,py+ps);ctx.lineTo(px+ps-bevel,py+ps-bevel);ctx.lineTo(px+ps-bevel,py+bevel);
+  ctx.closePath();ctx.fill();
+  // 작은 반짝임(좌상단)
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.fillRect(px+bevel+1,py+bevel+1,Math.max(1,Math.round(ps*0.12)),Math.max(1,Math.round(ps*0.12)));
+
+  // 외곽선
+  ctx.strokeStyle=colorId===24?'rgba(0,0,0,0.45)':'rgba(0,0,0,0.3)';
+  ctx.lineWidth=Math.max(0.5,SZ*0.05);
+  ctx.strokeRect(px+0.4,py+0.4,ps-0.8,ps-0.8);
+}
+
+// ===== 보석 이동 애니메이션 =====
+let anims=[];           // {fromX,fromY,toX,toY,color,matched,start,dur,hideKey}
+let animating=false;
+const ANIM_DUR=160;     // 개별 보석 이동 시간(ms)
+const ANIM_STAGGER=70;  // 보석 사이 출발 간격(ms) → 슉슉슉 순차 느낌
+
+function cellPx(r,c){return {x:c*SZ+GRID_OFFSET, y:r*SZ+GRID_OFFSET};}
+// 버퍼는 캔버스 아래(그림 아래쪽 중앙)
+function bufferEdgePx(){return {x:CV_SIZE/2-SZ/2, y:GRID_OFFSET+GRID_SIZE-SZ};}
+
+function easeOut(t){return 1-Math.pow(1-t,3);}
+
+function startAnims(list){
+  const now=performance.now();
+  list.forEach((a,i)=>{a.start=now+i*ANIM_STAGGER;a.dur=ANIM_DUR;anims.push(a);});
+  if(!animating){animating=true;requestAnimationFrame(animLoop);}
+}
+
+function animLoop(now){
+  let active=false;
+  anims=anims.filter(a=>{
+    const t=(now-a.start)/a.dur;
+    if(t>=1)return false;   // 도착 완료 → 제거(실제 보석으로 표시됨)
+    active=true;return true; // 진행 중이거나 아직 출발 전
+  });
+  draw();
+  if(active||anims.length){requestAnimationFrame(animLoop);}
+  else{animating=false;draw();}
+}
+
+function drawAnims(now){
+  for(const a of anims){
+    let x,y;
+    if(now<a.start){          // 출발 대기 중 → 출발점에 머무름
+      x=a.fromX;y=a.fromY;
+    }else{
+      const t=Math.min((now-a.start)/a.dur,1);
+      const e=easeOut(t);
+      x=a.fromX+(a.toX-a.fromX)*e;
+      y=a.fromY+(a.toY-a.fromY)*e;
+    }
+    // 이동 중에는 항상 미완성 모양으로 그림. 도착 후(anims에서 제거된 뒤)
+    // 그 칸의 실제 보석이 정답이면 메인 루프가 정답(꽉 찬) 모양으로 그려줌
+    drawGem(x,y,a.color,false,false);
+  }
+}
+
+function draw(){
+  // 변환 초기화 후 전체 클리어 (확대 시 가장자리 잔상 방지)
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.fillStyle='#060b14';
+  ctx.fillRect(0,0,CV_SIZE,CV_SIZE);
+  // 줌/팬 변환 적용
+  ctx.setTransform(view.scale,0,0,view.scale,view.x,view.y);
+  // 배경: 전체를 베이지로 (캔버스 전체 + 여유)
+  ctx.fillStyle='#E8DCC0';
+  ctx.fillRect(-CV_SIZE,-CV_SIZE,CV_SIZE*3,CV_SIZE*3);
+  const clusterKeys=new Set((selCluster||[]).map(({r,c})=>r+'_'+c));
+  // 애니메이션 도착 예정 칸: 도착 전까지 빈 홈으로 표시
+  const hideKeys=new Set(anims.map(a=>a.hideKey).filter(Boolean));
+
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      const ansId=ANS[r][c];
+      if(ansId===0)continue; // 배경은 이미 베이지
+      const x=c*SZ+GRID_OFFSET, y=r*SZ+GRID_OFFSET;
+      const k=r+'_'+c;
+      let gemId=gems[k];
+      if(hideKeys.has(k))gemId=undefined; // 도착 중 → 비워 보이게
+      const matched=(gemId!==undefined&&gemId===ansId);
+
+      if(gemId===undefined){
+        // 빈 슬롯: 바깥은 완성 색(밝은 원색), 안쪽은 보석이 빠진 어두운 홈
+        ctx.fillStyle=PAL[ansId];
+        ctx.fillRect(x,y,SZ,SZ);
+        // 안쪽 홈 (보석 들어갈 자리) — 셀 크기에 비례
+        const inset=Math.max(1.5,SZ*0.19);
+        ctx.fillStyle=slotFloor(ansId);
+        ctx.fillRect(x+inset,y+inset,SZ-inset*2,SZ-inset*2);
+        // 홈 안쪽 음영 (살짝 파인 느낌)
+        ctx.strokeStyle='rgba(0,0,0,0.25)';
+        ctx.lineWidth=Math.max(0.5,SZ*0.05);
+        ctx.strokeRect(x+inset+0.4,y+inset+0.4,SZ-inset*2-0.8,SZ-inset*2-0.8);
+        // 칸 구분선
+        ctx.strokeStyle='rgba(0,0,0,0.18)';
+        ctx.lineWidth=Math.max(0.4,SZ*0.03);
+        ctx.strokeRect(x+0.25,y+0.25,SZ-0.5,SZ-0.5);
+        continue;
+      }
+
+      // (보석이 놓인 칸) 바깥 바닥 = 정답 색(완성 색)과 동일
+      ctx.fillStyle=PAL[ansId];
+      ctx.fillRect(x,y,SZ,SZ);
+      // 칸 구분선
+      ctx.strokeStyle='rgba(0,0,0,0.18)';
+      ctx.lineWidth=0.5;
+      ctx.strokeRect(x+0.25,y+0.25,SZ-0.5,SZ-0.5);
+
+      const inCluster=clusterKeys.has(k);
+      // 선택된 보석은 들어올림을 최종 단계에서 그림. 여기선 평범하게 그림(어두운 홈 표시 안 함)
+      if(!inCluster){
+        // 미완성 보석은 안쪽에 작게(바깥 정답 색이 테두리로 보임), 완성은 칸을 꽉 채움
+        drawGem(x,y,gemId,false,matched);
+      }
+    }
+  }
+
+  // 선택 덩어리는 drawGem의 들어올림(lift) 효과로 표시됨 (색 무관)
+  // 들어올린 보석이 위쪽 칸에 가려지지 않도록 맨 위에 다시 그림
+  if(selCluster&&selCluster.length){
+    const hide=new Set(anims.map(a=>a.hideKey).filter(Boolean));
+    selCluster.forEach(({r,c})=>{
+      const k=r+'_'+c;
+      const gemId=gems[k];
+      if(gemId===undefined||hide.has(k))return;
+      const x=c*SZ+GRID_OFFSET, y=r*SZ+GRID_OFFSET;
+      const matched=(gemId===ANS[r][c]);
+      drawGem(x,y,gemId,true,matched);
+    });
+  }
+
+  // 움직이는 보석을 맨 위에
+  if(anims.length)drawAnims(performance.now());
+  // 색 완성 반짝임 (변환 안에서 그림 좌표에 맞춰)
+  if(sparkles.length)drawSparkles(performance.now());
+
+  // 변환 원복 후 미니맵 갱신
+  ctx.setTransform(1,0,0,1,0,0);
+  drawMinimap();
+  // 폭죽 (변환 원복 후 캔버스 전체에)
+  if(particles.length)drawFireworks(performance.now());
+}
+
+// ===== 줌 / 이동(pan) / 탭 =====
+const view={scale:1,x:0,y:0};
+const MIN_SCALE=0.9, MAX_SCALE=4;
+// 그림은 캔버스 안 중앙에 배치. 캔버스가 그림보다 크면 모서리를 중앙으로 끌어올 수 있음.
+// GRID_SIZE=512 (그림 픽셀), CV_SIZE=768 (캔버스 픽셀)
+// 1배 시 그림을 캔버스 중앙에: gridOffset = (768-512)/2 = 128
+const GRID_SIZE=GRID_PX;  // 그림 영역(화면 픽셀) = 512, 셀 크기는 SZ=GRID_PX/COLS
+const CV_SIZE=768;    // 캔버스 내부 해상도
+const GRID_OFFSET=(CV_SIZE-GRID_SIZE)/2;  // 128
+
+function clampView(){
+  view.scale=Math.max(MIN_SCALE,Math.min(MAX_SCALE,view.scale));
+  // 최소 1배에서 그림 영역 전체가 보이도록 (캔버스 기준)
+  // 1배 시 그림은 GRID_OFFSET~GRID_OFFSET+GRID_SIZE
+  // 확대 시: 모서리가 화면 중앙까지 올 수 있도록 여유 허용
+  // pan 제한: 그림 바깥으로 CV_SIZE/2만큼 추가 여유
+  const slack=CV_SIZE/2;
+  const minX=-(GRID_OFFSET+GRID_SIZE)*view.scale+CV_SIZE-slack;
+  const maxX= GRID_OFFSET*view.scale+slack;
+  const minY=-(GRID_OFFSET+GRID_SIZE)*view.scale+CV_SIZE-slack;
+  const maxY= GRID_OFFSET*view.scale+slack;
+  view.x=Math.max(minX,Math.min(maxX,view.x));
+  view.y=Math.max(minY,Math.min(maxY,view.y));
+}
+
+// 화면(클라이언트) 좌표 → 캔버스 내부 좌표
+function screenToWorld(clientX,clientY){
+  const rect=cv.getBoundingClientRect();
+  const cx=(clientX-rect.left)*(CV_SIZE/rect.width);
+  const cy=(clientY-rect.top)*(CV_SIZE/rect.height);
+  return {x:(cx-view.x)/view.scale, y:(cy-view.y)/view.scale};
+}
+
+// 특정 화면 지점을 중심으로 줌
+function zoomAt(clientX,clientY,factor){
+  const before=screenToWorld(clientX,clientY);
+  view.scale*=factor;
+  clampView();
+  const rect=cv.getBoundingClientRect();
+  const cx=(clientX-rect.left)*(CV_SIZE/rect.width);
+  const cy=(clientY-rect.top)*(CV_SIZE/rect.height);
+  view.x=cx-before.x*view.scale;
+  view.y=cy-before.y*view.scale;
+  clampView();
+  updateMinimapVisibility();
+  draw();
+}
+
+// 1배 리셋: 그림이 캔버스 중앙에 오도록
+function resetView(){
+  view.scale=1;
+  view.x=0; view.y=0;
+  clampView();
+  updateMinimapVisibility();
+  draw();
+}
+
+function updateMinimapVisibility(){
+  const mm=document.getElementById('minimap');
+  if(view.scale>1.01)mm.classList.add('show');else mm.classList.remove('show');
+}
+
+// 탭 보정: 월드 좌표 → 가장 적절한 칸 (GRID_OFFSET 반영, 현재 동작에 유효한 칸 우선)
+function worldToCell(wx,wy){
+  const lx=wx-GRID_OFFSET, ly=wy-GRID_OFFSET;
+  const col=Math.floor(lx/SZ), row=Math.floor(ly/SZ);
+
+  // 현재 선택 상태에서 "이 칸이 동작 가능한가"를 판정
+  // - 선택 없음: 선택 가능한 보석 칸(canSelect)이 유효
+  // - 보석 선택됨(그리드/버퍼): 빈 칸(보석 빠진 활성 칸)이 유효 (이동 목적지)
+  const hasSelection = !!(selected || (selCluster&&selCluster.length) || (selBufIndices&&selBufIndices.length));
+  const heldColor = hasSelection ? selectedColor() : null;  // 들고 있는 보석 색
+  function isActionable(r,c){
+    if(r<0||r>=ROWS||c<0||c>=COLS||ANS[r][c]===0)return false;
+    const k=r+'_'+c;
+    if(hasSelection){
+      // 이동 목적지: 보석이 없는(빈) 활성 칸
+      return gems[k]===undefined;
+    } else {
+      // 선택 대상: 선택 가능한 보석
+      return canSelect(r,c,gems);
+    }
+  }
+  // 들고 있는 색과 정답이 일치하는 빈 칸인가 (놓으면 바로 완성되는 칸)
+  function isMatchTarget(r,c){
+    if(!hasSelection||heldColor==null)return false;
+    if(r<0||r>=ROWS||c<0||c>=COLS||ANS[r][c]===0)return false;
+    return gems[r+'_'+c]===undefined && ANS[r][c]===heldColor;
+  }
+
+  // 정확히 그 칸이 활성이면:
+  if(row>=0&&row<ROWS&&col>=0&&col<COLS&&ANS[row][col]!==0){
+    // 보석을 들고 있고 누른 칸이 정답 일치 빈 칸이면 즉시 반환 (최선)
+    if(isMatchTarget(row,col))return {row,col};
+    // 보석을 들고 있고 누른 칸이 (정답 불일치) 빈 칸이면, 주변에 정답 일치 칸이 있는지 먼저 보고 결정
+    // → 아래 주변 탐색으로 넘어감 (정답 일치 칸 우선)
+    if(!hasSelection && isActionable(row,col))return {row,col};
+    // 선택 없을 때 정확히 누른 보석은 즉시 반환
+  }
+
+  // 주변 탐색: 동작 가능한 칸을 더 넓게(반경 3), 그냥 활성 칸은 좁게(반경 1.5) 잡음
+  let bestMatch=null, bestMatchD=Infinity;     // 정답 일치 빈 칸 중 최근접 (최우선)
+  let bestAction=null, bestActionD=Infinity;   // 동작 가능 칸 중 최근접
+  let bestActive=null, bestActiveD=Infinity;   // 그냥 활성 칸 중 최근접
+  const R=3;
+  for(let dr=-R;dr<=R;dr++)for(let dc=-R;dc<=R;dc++){
+    const r=row+dr,c=col+dc;
+    if(r<0||r>=ROWS||c<0||c>=COLS||ANS[r][c]===0)continue;
+    const ccx=c*SZ+SZ/2, ccy=r*SZ+SZ/2;
+    const d=(lx-ccx)**2+(ly-ccy)**2;
+    if(isMatchTarget(r,c)){
+      if(d<bestMatchD){bestMatchD=d;bestMatch={row:r,col:c};}
+    }
+    if(isActionable(r,c)){
+      if(d<bestActionD){bestActionD=d;bestAction={row:r,col:c};}
+    }
+    if(d<bestActiveD){bestActiveD=d;bestActive={row:r,col:c};}
+  }
+
+  // 0) 보석을 들고 있을 때: 정답이 일치하는 빈 칸을 최우선으로 보정 (반경 2.5칸까지)
+  if(bestMatch&&bestMatchD<=(SZ*2.5)**2)return bestMatch;
+  // 1) 동작 가능한 칸을 적극적으로 보정 (반경 2.5칸까지)
+  if(bestAction&&bestActionD<=(SZ*2.5)**2)return bestAction;
+  // 2) 동작 가능 칸이 멀면, 그냥 활성 칸 중 가까운 것 (반경 1.2칸)
+  if(bestActive&&bestActiveD<=(SZ*1.2)**2)return bestActive;
+  return null;
+}
+
+function doSelectAt(clientX,clientY){
+  const w=screenToWorld(clientX,clientY);
+  const cell=worldToCell(w.x,w.y);
+  if(!cell){
+    // 유효 칸 못 찾음 → 선택 해제
+    if(selected||selCluster||selBufIndices.length){selected=null;selCluster=null;selBufIndices=[];renderBuf();draw();setStatus('선택 해제',false);}
+    return;
+  }
+  handleGrid(cell.row,cell.col);
+}
+
+// ----- 포인터 제스처 (드래그=이동, 거의 안 움직이면=탭) -----
+const pointers=new Map();
+let panLast=null, pinchLast=null, movedDist=0, downPos=null;
+const TAP_THRESH=8; // px, 이 이하 이동이면 탭으로 간주
+
+cv.addEventListener('pointerdown',e=>{
+  cv.setPointerCapture(e.pointerId);
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===1){
+    panLast={x:e.clientX,y:e.clientY};
+    downPos={x:e.clientX,y:e.clientY};
+    movedDist=0;
+  }else if(pointers.size===2){
+    const pts=[...pointers.values()];
+    pinchLast=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+    panLast=null;
+  }
+});
+
+cv.addEventListener('pointermove',e=>{
+  if(!pointers.has(e.pointerId))return;
+  pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pointers.size===2&&pinchLast!==null){
+    const pts=[...pointers.values()];
+    const dist=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
+    const mid={x:(pts[0].x+pts[1].x)/2,y:(pts[0].y+pts[1].y)/2};
+    if(pinchLast>0)zoomAt(mid.x,mid.y,dist/pinchLast);
+    pinchLast=dist;
+    return;
+  }
+  if(pointers.size===1&&panLast){
+    const dx=e.clientX-panLast.x, dy=e.clientY-panLast.y;
+    movedDist+=Math.hypot(dx,dy);
+    if(view.scale>1.01){ // 확대 상태에서만 이동
+      cv.classList.add('panning');
+      view.x+=dx*(cv.width/cv.getBoundingClientRect().width);
+      view.y+=dy*(cv.height/cv.getBoundingClientRect().height);
+      clampView();draw();
+    }
+    panLast={x:e.clientX,y:e.clientY};
+  }
+});
+
+function endPointer(e){
+  if(pointers.has(e.pointerId)){
+    // 마지막 한 손가락을 뗄 때, 거의 안 움직였으면 탭 → 선택
+    if(pointers.size===1&&downPos&&movedDist<TAP_THRESH){
+      doSelectAt(e.clientX,e.clientY);
+    }
+    pointers.delete(e.pointerId);
+  }
+  if(pointers.size<2)pinchLast=null;
+  if(pointers.size===0){panLast=null;downPos=null;cv.classList.remove('panning');}
+  else if(pointers.size===1){const p=[...pointers.values()][0];panLast={x:p.x,y:p.y};}
+}
+cv.addEventListener('pointerup',endPointer);
+cv.addEventListener('pointercancel',endPointer);
+
+// 마우스 오버 시 해당 칸의 정답 색을 상태바에 표시 (누르지 않은 상태)
+let hoverCell=null;
+cv.addEventListener('pointermove',e=>{
+  if(pointers.size>0)return;           // 드래그/팬 중에는 hover 표시 안 함
+  if(e.pointerType==='touch')return;   // 터치는 hover 개념 없음
+  const w=screenToWorld(e.clientX,e.clientY);
+  // 그리드 로컬 좌표
+  const lx=w.x-GRID_OFFSET, ly=w.y-GRID_OFFSET;
+  const c=Math.floor(lx/SZ), r=Math.floor(ly/SZ);
+  if(r<0||r>=ROWS||c<0||c>=COLS||ANS[r][c]===0){
+    if(hoverCell){hoverCell=null;refreshStatusAfterHover();}
+    return;
+  }
+  const key=r+'_'+c;
+  if(hoverCell===key)return;
+  hoverCell=key;
+  showHoverColor(ANS[r][c], r, c);
+});
+cv.addEventListener('pointerleave',()=>{
+  if(hoverCell){hoverCell=null;refreshStatusAfterHover();}
+});
+
+function showHoverColor(colorId,r,c){
+  const box=document.getElementById('hoverColor');
+  if(!box||!PAL[colorId])return;
+  const ansName=CNAME[colorId]||('색'+colorId);
+  const gemId=gems[r+'_'+c];
+  const done=(gemId===colorId);
+
+  // 정답 색 (항상 표시)
+  const ansItem=box.querySelector('.hc-answer');
+  ansItem.querySelector('.hc-sw').style.background=PAL[colorId];
+  ansItem.querySelector('.hc-name').textContent=ansName+(done?' ✓':'');
+
+  // 현재 놓인 보석 색
+  const curItem=box.querySelector('.hc-current');
+  if(done){
+    // 이미 정답 → 현재 항목 숨김 (중복)
+    curItem.classList.add('hidden');
+  }else if(gemId===undefined){
+    // 빈 칸
+    curItem.classList.remove('hidden');
+    curItem.querySelector('.hc-sw').style.background='transparent';
+    curItem.querySelector('.hc-sw').style.borderStyle='dashed';
+    curItem.querySelector('.hc-name').textContent='비어있음';
+  }else{
+    // 틀린 보석이 놓여있음
+    curItem.classList.remove('hidden');
+    curItem.querySelector('.hc-sw').style.background=PAL[gemId];
+    curItem.querySelector('.hc-sw').style.borderStyle='solid';
+    curItem.querySelector('.hc-name').textContent=CNAME[gemId]||('색'+gemId);
+  }
+  box.classList.add('show');
+}
+function refreshStatusAfterHover(){
+  // hover 해제 → 색 표시 박스 숨김 (상태바는 건드리지 않음)
+  const box=document.getElementById('hoverColor');
+  if(box)box.classList.remove('show');
+}
+
+// 휠 줌 (PC)
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  zoomAt(e.clientX,e.clientY, e.deltaY<0?1.12:1/1.12);
+},{passive:false});
+
+// 줌 버튼
+document.getElementById('zoomIn').addEventListener('click',()=>{const r=cv.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,1.4);});
+document.getElementById('zoomOut').addEventListener('click',()=>{const r=cv.getBoundingClientRect();zoomAt(r.left+r.width/2,r.top+r.height/2,1/1.4);});
+document.getElementById('zoomReset').addEventListener('click',resetView);
+
+// ----- 미니맵 -----
+const mm=document.getElementById('minimap');
+const mmCtx=mm.getContext('2d');
+function drawMinimap(){
+  if(view.scale<=1.01)return;
+  const W=mm.width,H=mm.height;
+  mmCtx.clearRect(0,0,W,H);
+  mmCtx.fillStyle='#E8DCC0';mmCtx.fillRect(0,0,W,H);
+  const sc=W/CV_SIZE;
+  // 그림 영역 배경
+  mmCtx.fillStyle='#E8DCC0';
+  mmCtx.fillRect(GRID_OFFSET*sc,GRID_OFFSET*sc,GRID_SIZE*sc,GRID_SIZE*sc);
+  // 활성 칸
+  for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
+    const ans=ANS[r][c];if(ans===0)continue;
+    const g=gems[r+'_'+c];
+    mmCtx.fillStyle=g!==undefined?PAL[g]:PAL[ans];
+    mmCtx.fillRect((c*SZ+GRID_OFFSET)*sc, (r*SZ+GRID_OFFSET)*sc, SZ*sc+0.5, SZ*sc+0.5);
+  }
+  // 현재 보이는 영역 사각형 (CV_SIZE 기준)
+  const vx=-view.x/view.scale, vy=-view.y/view.scale;
+  const vw=CV_SIZE/view.scale, vh=CV_SIZE/view.scale;
+  mmCtx.strokeStyle='rgba(0,0,0,0.7)';mmCtx.lineWidth=1.5;
+  mmCtx.strokeRect(vx*sc,vy*sc,vw*sc,vh*sc);
+  mmCtx.strokeStyle='rgba(255,255,255,0.9)';mmCtx.lineWidth=0.75;
+  mmCtx.strokeRect(vx*sc,vy*sc,vw*sc,vh*sc);
+}
+
+function handleGrid(r,c){
+  const k=r+'_'+c;
+  if(ANS[r][c]===0){
+    // 빈 배경 클릭 → 어떤 선택이든 해제
+    if(selected||selCluster||selBufIndices.length){
+      selected=null;selCluster=null;selBufIndices=[];renderBuf();draw();setStatus('선택 해제',false);
+    }
+    return;
+  }
+
+  if(selected&&selected.type==='buf'){
+    if(gems[k]===undefined){
+      const destAns=ANS[r][c];
+      // 목적지 정답 색과 일치하는 버퍼 보석 인덱스만 추림
+      const matchIdx=selBufIndices.filter(i=>buf[i]===destAns);
+      if(matchIdx.length===0){selected=null;selBufIndices=[];renderBuf();draw();setStatus('이 칸의 정답 색과 일치하는 보석이 없어요 — 선택 해제',false);return;}
+      const emptySlots=getEmptyCluster(r,c).filter(({r:er,c:ec})=>ANS[er][ec]===destAns);
+      if(emptySlots.length===0){selected=null;selBufIndices=[];renderBuf();draw();setStatus('이동할 빈 칸이 없어요 — 선택 해제',false);return;}
+      // 실제 배치 수 = 일치하는 보석 수 vs 빈 칸 수 중 작은 것
+      const placeCount=Math.min(matchIdx.length,emptySlots.length);
+      const toPlace=matchIdx.slice(0,placeCount);
+      // 배치 + 애니메이션 (버퍼 가장자리 → 도착 셀)
+      const edge=bufferEdgePx();
+      const animList=[];
+      for(let i=0;i<placeCount;i++){
+        const {r:dr,c:dc}=emptySlots[i];
+        const color=buf[toPlace[i]];
+        const to=cellPx(dr,dc);
+        animList.push({fromX:edge.x,fromY:edge.y,toX:to.x,toY:to.y,color,matched:(color===ANS[dr][dc]),hideKey:dr+'_'+dc});
+        gems[dr+'_'+dc]=color;
+      }
+      // 높은 인덱스부터 splice해야 앞 인덱스 안 밀림
+      [...toPlace].sort((a,b)=>b-a).forEach(i=>buf.splice(i,1));
+      moves++;upMoves();
+      startAnims(animList);
+      // 아직 같은 색 버퍼 보석이 남아있으면 선택 유지
+      const newSameIdx=buf.map((c,i)=>c===destAns?i:-1).filter(i=>i>=0);
+      if(newSameIdx.length>0){
+        selected={type:'buf',idx:newSameIdx[0]};
+        selBufIndices=newSameIdx;
+        renderBuf();draw();checkClear();
+        setStatus(`${placeCount}개 배치 — 버퍼에 ${newSameIdx.length}개 남음`,true);
+      } else {
+        selected=null;selBufIndices=[];selCluster=null;
+        renderBuf();draw();checkClear();
+        setStatus(`버퍼에서 ${placeCount}개 배치됨`,true);
+      }
+    } else {
+      // 보석이 이미 있는 칸 → 놓을 수 없으므로 선택 해제
+      selected=null;selBufIndices=[];renderBuf();draw();setStatus('빈 칸에만 놓을 수 있어요 — 선택 해제',false);
+    }
+    return;
+  }
+
+  if(selCluster&&selCluster.length){
+    const clusterKeys=new Set(selCluster.map(({r,c})=>r+'_'+c));
+    // Fix 4: clicking inside cluster → deselect
+    if(clusterKeys.has(k)){selected=null;selCluster=null;draw();setStatus('선택 해제',false);return;}
+
+    const destAns=ANS[r][c];
+    if(destAns===0){selected=null;selCluster=null;draw();return;}
+
+    const toMove=selCluster.filter(({r:sr,c:sc})=>gems[sr+'_'+sc]===destAns);
+    if(toMove.length===0){selected=null;selCluster=null;draw();setStatus('이 칸의 정답 색과 일치하는 보석이 없어요 — 선택 해제',false);return;}
+
+    const emptySlots=getEmptyCluster(r,c).filter(({r:er,c:ec})=>ANS[er][ec]===destAns);
+    const moveCount=Math.min(toMove.length,emptySlots.length);
+    if(moveCount===0){selected=null;selCluster=null;draw();setStatus('이동할 빈 칸이 없어요 — 선택 해제',false);return;}
+
+    const animList=[];
+    for(let i=0;i<moveCount;i++){
+      const {r:sr,c:sc}=toMove[i];
+      const {r:dr,c:dc}=emptySlots[i];
+      const color=gems[sr+'_'+sc];
+      const from=cellPx(sr,sc), to=cellPx(dr,dc);
+      animList.push({fromX:from.x,fromY:from.y,toX:to.x,toY:to.y,color,matched:(color===ANS[dr][dc]),hideKey:dr+'_'+dc});
+      gems[dr+'_'+dc]=color;
+      delete gems[sr+'_'+sc];
+    }
+    moves++;upMoves();
+    startAnims(animList);
+
+    // Fix 3: 이동 후에도 남은 보석들은 모두 선택 유지 (고립되어 흩어져도 해제하지 않음)
+    const remaining=selCluster.filter(({r:sr,c:sc})=>gems[sr+'_'+sc]!==undefined&&canSelect(sr,sc,gems));
+    if(remaining.length>0){
+      // 인접 여부와 무관하게 남은 칸 전체를 선택 상태로 유지
+      selCluster=remaining;
+      selected={type:'grid',r:remaining[0].r,c:remaining[0].c};
+      draw();checkClear();
+      setStatus(`${moveCount}개 이동 — 아직 ${remaining.length}개 남음`,true);
+    } else {
+      selected=null;selCluster=null;
+      draw();checkClear();
+      setStatus(`${moveCount}개 보석 이동됨`,true);
+    }
+    return;
+  }
+
+  if(!canSelect(r,c,gems)){
+    if(gems[k]===ANS[r][c])setStatus('이미 정답인 보석은 선택할 수 없어요',false);
+    else setStatus('보석이 없는 칸이에요',false);
+    return;
+  }
+  const cluster=getCluster(r,c,gems);
+  selected={type:'grid',r,c};
+  selCluster=cluster;
+  selBufIndices=[];
+  draw();
+  setStatus(cluster.length>1?`같은 색 ${cluster.length}개 덩어리 선택됨 — 이동할 칸 또는 버퍼 클릭`:'보석 1개 선택됨 — 이동할 칸 또는 버퍼 클릭',true);
+}
+
+// 버퍼를 색깔별로 정렬해 같은 색끼리 모이게 함
+function sortBuf(){
+  buf.sort((a,b)=>a-b);
+}
+
+function renderBuf(){
+  const el=document.getElementById('bslots');
+  el.innerHTML='';
+  const MAX_BUF=30;
+  const BUF_SIZE=bufSize;
+  for(let i=0;i<MAX_BUF;i++){
+    const sl=document.createElement('div');
+    sl.className='bslot';
+    // 아직 해금되지 않은 칸 → 잠금 표시
+    if(i>=BUF_SIZE){
+      sl.classList.add('locked');
+      sl.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+      sl.title='색을 하나 완성하면 칸이 열려요';
+      el.appendChild(sl);
+      continue;
+    }
+    if(i<buf.length){
+      sl.classList.add('filled');
+      const isSel=selBufIndices&&selBufIndices.includes(i);
+      if(isSel)sl.classList.add('sel-buf');
+      const dot=document.createElement('canvas');
+      dot.className='gem-dot'+(buf[i]===24?' white-gem':'');
+      const DS=40; dot.width=DS; dot.height=DS;
+      drawGemTo(dot.getContext('2d'),DS,buf[i]);
+      sl.appendChild(dot);
+      sl.addEventListener('click',(idx=>()=>handleBufClick(idx))(i));
+    } else {
+      // empty slot — clicking sends selected gem/cluster here
+      sl.title='선택한 보석을 버퍼에 보관';
+      sl.addEventListener('click',()=>{
+        if(buf.length>=BUF_SIZE){setStatus(`버퍼가 가득 찼어요 (최대 ${BUF_SIZE}칸)`,false);return;}
+        if(selCluster&&selCluster.length){
+          const canFit=Math.min(selCluster.length, BUF_SIZE-buf.length);
+          const toStore=selCluster.slice(0,canFit);
+          const edge=bufferEdgePx();
+          const animList=[];
+          toStore.forEach(({r,c})=>{
+            const color=gems[r+'_'+c];
+            const from=cellPx(r,c);
+            animList.push({fromX:from.x,fromY:from.y,toX:edge.x,toY:edge.y,color,matched:false});
+            buf.push(color);delete gems[r+'_'+c];
+          });
+          sortBuf();
+          moves++;upMoves();
+          startAnims(animList);
+          // Fix 3: 남은 보석 전체를 선택 유지 (흩어져도 해제 안 함)
+          const remaining=selCluster.slice(canFit).filter(({r,c})=>gems[r+'_'+c]!==undefined&&canSelect(r,c,gems));
+          if(remaining.length>0){
+            selCluster=remaining;
+            selected={type:'grid',r:remaining[0].r,c:remaining[0].c};
+          } else {
+            selected=null;selCluster=null;
+          }
+          renderBuf();draw();
+          setStatus(`${toStore.length}개 버퍼에 보관`,true);
+        } else if(selected&&selected.type==='grid'){
+          const k=selected.r+'_'+selected.c;
+          if(gems[k]!==undefined){
+            const color=gems[k];
+            const from=cellPx(selected.r,selected.c);
+            const edge=bufferEdgePx();
+            buf.push(color);delete gems[k];moves++;upMoves();
+            sortBuf();
+            startAnims([{fromX:from.x,fromY:from.y,toX:edge.x,toY:edge.y,color,matched:false}]);
+          }
+          selected=null;selCluster=null;
+          renderBuf();draw();
+          setStatus('보석을 버퍼에 보관했어요',true);
+        }
+      });
+    }
+    el.appendChild(sl);
+  }
+}
+
+function handleBufClick(idx){
+  // 같은 색 인덱스 모두 찾기
+  const color=buf[idx];
+  const sameIndices=buf.map((c,i)=>c===color?i:-1).filter(i=>i>=0);
+
+  // 이미 같은 그룹이 선택된 상태에서 같은 슬롯 클릭 → 해제
+  if(selected&&selected.type==='buf'&&buf[selected.idx]===color){
+    selected=null;selBufIndices=[];selCluster=null;
+    renderBuf();draw();setStatus('선택 해제',false);return;
+  }
+  // 그리드 선택 중이었으면 초기화 (캔버스 강조도 지우기 위해 draw 호출)
+  selCluster=null;
+  selected={type:'buf',idx};
+  selBufIndices=sameIndices;
+  renderBuf();draw();
+  setStatus(sameIndices.length>1?`버퍼에서 같은 색 ${sameIndices.length}개 선택 — 빈 칸에 놓으세요`:'버퍼 보석 선택됨 — 빈 칸에 놓으세요',true);
+}
+
+function checkClear(){
+  checkColorCompletion();
+  const ok=activeCells().every(({r,c})=>gems[r+'_'+c]===ANS[r][c]);
+  if(ok){
+    const elapsed=stopTimer();
+    stageCleared.add(currentStage);
+    recordResult(currentStage, elapsed, moves);
+    // localStorage 최고기록 갱신
+    const isNew=saveBestRecord(currentStage,currentDifficulty,elapsed,moves);
+    const prev=getBestRecord(currentStage,currentDifficulty);
+    document.getElementById('clear-time').textContent=fmtTime(elapsed);
+    document.getElementById('clear-moves').textContent=moves+'회';
+    // 신기록 / 최고기록 표시
+    const recEl=document.getElementById('clear-best');
+    if(recEl){
+      if(isNew){
+        recEl.textContent='🏆 신기록!';recEl.style.color='#FFB703';
+      } else if(prev){
+        recEl.textContent='최고기록 '+fmtTime(prev.time)+' · '+prev.moves+'회 ('+prev.date+')';
+        recEl.style.color='';
+      } else recEl.textContent='';
+    }
+    startClearSequence();
+  }
+}
+
+// ===== 클리어 시퀀스: 전체 반짝임 → 폭죽 → 결과창 =====
+function startClearSequence(){
+  // 1단계: 전체 칸 반짝임 (700ms)
+  const cells=activeCells();
+  startSparkle(cells);
+  // 2단계: 반짝임 절반 지점에서 폭죽 시작 (300ms 후)
+  setTimeout(()=>{startFireworks();},300);
+  // 3단계: 폭죽+반짝임 충분히 본 후 결과창 (2200ms 후)
+  setTimeout(()=>{
+    document.getElementById('clear-overlay').classList.add('show');
+  },2200);
+}
+
+// ===== 폭죽 파티클 시스템 =====
+let particles=[];
+let fireworksAnimating=false;
+const PARTICLE_COLORS=[1,4,7,10,13,16,17,24,25,5,11,8]; // 팔레트 색 ID
+
+function startFireworks(){
+  // 캔버스 위 여러 지점에서 동시에 터짐
+  const bursts=[
+    {x:CV_SIZE*0.25, y:CV_SIZE*0.3},
+    {x:CV_SIZE*0.75, y:CV_SIZE*0.25},
+    {x:CV_SIZE*0.5,  y:CV_SIZE*0.2},
+    {x:CV_SIZE*0.2,  y:CV_SIZE*0.55},
+    {x:CV_SIZE*0.8,  y:CV_SIZE*0.5},
+  ];
+  const now=performance.now();
+  bursts.forEach((b,bi)=>{
+    const delay=bi*180; // 연속으로 터짐
+    const col=PAL[PARTICLE_COLORS[bi%PARTICLE_COLORS.length]];
+    const col2=PAL[PARTICLE_COLORS[(bi+3)%PARTICLE_COLORS.length]];
+    // 한 발에 36개 파티클
+    for(let i=0;i<36;i++){
+      const ang=(i/36)*Math.PI*2;
+      const spd=rng()*3+2;
+      particles.push({
+        x:b.x, y:b.y,
+        vx:Math.cos(ang)*spd,
+        vy:Math.sin(ang)*spd-2, // 위로 약간 튀어나감
+        color: i%2===0?col:col2,
+        size: rng()*3+2,
+        life:1.0,
+        decay:0.013+rng()*0.01,
+        start:now+delay,
+        gravity:0.08,
+      });
+    }
+  });
+  // 0.5초 후 2차 폭발
+  setTimeout(()=>{
+    const now2=performance.now();
+    const burst2=[
+      {x:CV_SIZE*0.4, y:CV_SIZE*0.15},
+      {x:CV_SIZE*0.65,y:CV_SIZE*0.4},
+      {x:CV_SIZE*0.3, y:CV_SIZE*0.45},
+    ];
+    burst2.forEach((b,bi)=>{
+      const col=PAL[PARTICLE_COLORS[(bi+5)%PARTICLE_COLORS.length]];
+      for(let i=0;i<28;i++){
+        const ang=(i/28)*Math.PI*2+(rng()-0.5)*0.3;
+        const spd=rng()*2.5+1.5;
+        particles.push({
+          x:b.x,y:b.y,
+          vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd-1.5,
+          color:col,size:rng()*2.5+1.5,life:1.0,
+          decay:0.015+rng()*0.012,
+          start:now2,gravity:0.07,
+        });
+      }
+    });
+  },500);
+
+  if(!fireworksAnimating){fireworksAnimating=true;requestAnimationFrame(fireworksLoop);}
+}
+
+function fireworksLoop(now){
+  // 아직 시작 안 된 파티클 포함해 하나라도 살아있으면 계속
+  particles=particles.filter(p=>{
+    if(now<p.start)return true;
+    return p.life>0;
+  });
+  draw();
+  if(particles.length){requestAnimationFrame(fireworksLoop);}
+  else{fireworksAnimating=false;}
+}
+
+function drawFireworks(now){
+  ctx.save();
+  // 폭죽은 변환 없이(스크린 좌표) 캔버스 전체에 그림
+  ctx.setTransform(1,0,0,1,0,0);
+  for(const p of particles){
+    if(now<p.start)continue;
+    if(p.life<=0)continue;
+    // 물리 업데이트
+    const dt=(now-p.start)/16; // 프레임 단위
+    p.x+=p.vx; p.vy+=p.gravity; p.y+=p.vy;
+    p.life-=p.decay;
+    if(p.life<0)p.life=0;
+    // 화면 좌표로 변환 (캔버스 내부 좌표 → CSS 표시 크기)
+    const rect=cv.getBoundingClientRect();
+    const sc=rect.width/CV_SIZE;
+    const sx=p.x*sc, sy=p.y*sc;
+    // 화면 비율에 맞게 다시 캔버스 내부 좌표로
+    const a=p.life;
+    ctx.globalAlpha=a;
+    ctx.fillStyle=p.color;
+    const s=p.size*(0.5+p.life*0.5);
+    ctx.fillRect(p.x-s/2, p.y-s/2, s, s);
+  }
+  ctx.globalAlpha=1;
+  ctx.restore();
+}
+
+// ===== 기록 (랭킹 기반 데이터) =====
+// records["stage_difficulty"] = [{time, moves, diff, at}]
+const records={};
+function recKey(stage,diff){return stage+'_'+diff;}
+function recordResult(stage, time, moves){
+  const key=recKey(stage,currentDifficulty);
+  if(!records[key])records[key]=[];
+  records[key].push({time, moves, diff:currentDifficulty, at:Date.now()});
+}
+// 시간/이동 기준 베스트 (스테이지+난이도별, 랭킹용 헬퍼 — 추후 UI 연결)
+function bestByTime(stage,diff){
+  const rs=records[recKey(stage,diff||currentDifficulty)]||[];
+  return rs.length?rs.slice().sort((a,b)=>a.time-b.time):[];
+}
+function bestByMoves(stage,diff){
+  const rs=records[recKey(stage,diff||currentDifficulty)]||[];
+  return rs.length?rs.slice().sort((a,b)=>a.moves-b.moves):[];
+}
+
+// 현재 선택된 보석의 색 ID 반환 (없으면 null)
+function selectedColor(){
+  if(selCluster&&selCluster.length){
+    const {r,c}=selCluster[0];
+    return gems[r+'_'+c];
+  }
+  if(selected&&selected.type==='grid'){
+    return gems[selected.r+'_'+selected.c];
+  }
+  if(selected&&selected.type==='buf'&&selBufIndices&&selBufIndices.length){
+    return buf[selBufIndices[0]];
+  }
+  return null;
+}
+
+function setStatus(t,active){
+  const el=document.getElementById('sbar');
+  const col=selectedColor();
+  if(col!==null&&col!==undefined&&PAL[col]){
+    // 선택한 보석 색을 점 + 이름으로 표시
+    const name=CNAME[col]||('색'+col);
+    el.innerHTML='<span class="status-swatch" style="background:'+PAL[col]+
+      (col===25?';border-color:rgba(0,0,0,.35)':'')+'"></span>'+
+      '<span class="status-color-name">'+name+'</span>'+
+      '<span class="status-text">'+t+'</span>';
+  }else{
+    el.innerHTML='<span class="status-text">'+t+'</span>';
+  }
+  el.classList.toggle('active',!!active);
+}
+function upMoves(){document.getElementById('mc').textContent=moves;}
+
+// legend (완성 상태 반영)
+function renderLegend(){
+  const used=new Set();
+  activeCells().forEach(({r,c})=>used.add(ANS[r][c]));
+  const el=document.getElementById('leglist');
+  el.innerHTML='';
+  used.forEach(id=>{
+    const done=completedColors&&completedColors.has(String(id));
+    const row=document.createElement('div');
+    row.className='legend-row'+(done?' done':'');
+    const check=done?'<span class="leg-check"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#38B000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 6"/></svg></span>':'';
+    row.innerHTML=`<div class="legend-sq" style="background:${PAL[id]}"></div><span class="leg-name">${CNAME[id]||id}</span>${check}`;
+    el.appendChild(row);
+  });
+}
+
+// ===== 스테이지 선택 =====
+
+function setStageLabel(){
+  const dn=['','쉬움','보통','어려움'][currentDifficulty]||'';
+  document.getElementById('stageLabel').textContent='스테이지 '+(currentStage+1)+'. '+STAGE_LIST[currentStage].name+' · '+dn;
+}
+
+// 미니 미리보기 캔버스에 스테이지 완성 그림 그리기
+function drawStageThumb(canvas,grid){
+  const c=canvas.getContext('2d');
+  const rows=grid.length, cols=grid[0].length;
+  const s=canvas.width/cols;
+  c.fillStyle='#E8DCC0';c.fillRect(0,0,canvas.width,canvas.height);
+  for(let r=0;r<rows;r++)for(let col=0;col<cols;col++){
+    const v=grid[r][col];if(!v)continue;
+    c.fillStyle=PAL[v];
+    c.fillRect(col*s,r*s,s+0.5,s+0.5);
+  }
+}
+
+function openStageSelect(){
+  const grid=document.getElementById('stageGrid');
+  grid.innerHTML='';
+  STAGE_LIST.forEach((st,i)=>{
+    const card=document.createElement('div');
+    card.className='stage-card'+(i===currentStage?' active':'');
+    const cv=document.createElement('canvas');cv.width=96;cv.height=96;
+    drawStageThumb(cv,st.grid);
+    const nm=document.createElement('div');nm.className='nm';nm.textContent=(i+1)+'. '+st.name;
+    card.appendChild(cv);card.appendChild(nm);
+    // 각 난이도별 최고기록 표시
+    const diffNames=['','🟢','🟡','🔴'];
+    let hasAny=false;
+    for(let d=1;d<=3;d++){
+      const r=getBestRecord(i,d);
+      if(r){
+        const b=document.createElement('div');b.className='stage-best';
+        b.textContent=diffNames[d]+' '+fmtTime(r.time)+' · '+r.moves+'회';
+        card.appendChild(b);hasAny=true;
+      }
+    }
+    if(!hasAny&&stageCleared.has(i)){
+      const b=document.createElement('div');b.className='done-badge';b.textContent='✓ 클리어';card.appendChild(b);
+    }
+    card.addEventListener('click',()=>{selectStage(i);});
+    grid.appendChild(card);
+  });
+  document.getElementById('main-overlay').classList.remove('show');
+  document.getElementById('stage-overlay').classList.add('show');
+}
+
+function selectStage(i){
+  currentStage=i;
+  ANS=STAGE_LIST[i].grid;
+  applyStageSize(ANS);
+  // 스테이지 선택 → 난이도 선택 화면으로
+  document.getElementById('stage-overlay').classList.remove('show');
+  openDifficultySelect();
+}
+
+// 난이도 선택 화면
+function openDifficultySelect(){
+  document.getElementById('diff-stage-name').textContent=STAGE_LIST[currentStage].name;
+  document.getElementById('diff-overlay').classList.add('show');
+}
+
+function startGame(diff){
+  currentDifficulty=diff;
+  document.getElementById('diff-overlay').classList.remove('show');
+  document.getElementById('stage-overlay').classList.remove('show');
+  document.getElementById('main-overlay').classList.remove('show');
+  resetView();
+  resetGame();
+  renderLegend();
+  setStageLabel();
+}
+
+// 난이도 선택 → 스테이지 목록으로 뒤로
+document.getElementById('diffBack').addEventListener('click',()=>{
+  document.getElementById('diff-overlay').classList.remove('show');
+  openStageSelect();
+});
+document.querySelectorAll('.diff-card').forEach(card=>{
+  card.addEventListener('click',()=>startGame(Number(card.dataset.diff)));
+});
+
+function openNicknamePopup(){
+  const input=document.getElementById('nickInput');
+  if(input&&userNickname)input.value=userNickname;
+  document.getElementById('nickname-popup').classList.add('show');
+  setTimeout(()=>{if(input)input.focus();},100);
+}
+function submitNickname(){
+  const input=document.getElementById('nickInput');
+  const nick=(input?.value||'').trim();
+  if(!nick)return;
+  saveUser(nick);
+  document.getElementById('nickname-popup').classList.remove('show');
+}
+document.getElementById('nickCancel').addEventListener('click',()=>{
+  document.getElementById('nickname-popup').classList.remove('show');
+});
+document.getElementById('nickInput')?.addEventListener('keydown',e=>{
+  if(e.key==='Enter')submitNickname();
+});
+
+// 스테이지 선택 → 메인으로 뒤로
+document.getElementById('stageBack').addEventListener('click',()=>{
+  document.getElementById('stage-overlay').classList.remove('show');
+  goMain();
+});
+
+// 게임 → 메인으로
+function goMain(){
+  if(timerId){clearInterval(timerId);timerId=null;}
+  document.getElementById('stage-overlay').classList.remove('show');
+  document.getElementById('diff-overlay').classList.remove('show');
+  document.getElementById('clear-overlay').classList.remove('show');
+  document.getElementById('main-overlay').classList.add('show');
+}
+
+// 메인 페이지 미리보기 아트 (대표 스테이지 3개 썸네일)
+function renderMainArt(){
+  const wrap=document.getElementById('mainArt');
+  wrap.innerHTML='';
+  const picks=[0, 4, 18]; // 하트, 무지개, 퀼트 (대표 미리보기)
+  picks.forEach(i=>{
+    if(!STAGE_LIST[i])return;
+    const cv=document.createElement('canvas');cv.width=96;cv.height=96;
+    drawStageThumb(cv,STAGE_LIST[i].grid);
+    wrap.appendChild(cv);
+  });
+}
+
+// ===== 쿠키 유틸 =====
+function setCookie(name,value,days){
+  const d=new Date();d.setTime(d.getTime()+days*864e5);
+  document.cookie=name+'='+encodeURIComponent(value)+';expires='+d.toUTCString()+';path=/';
+}
+function getCookie(name){
+  const m=document.cookie.match('(?:^|; )'+name+'=([^;]*)');
+  return m?decodeURIComponent(m[1]):null;
+}
+
+// ===== 사용자 닉네임 =====
+let userNickname=null;
+function loadUser(){
+  const saved=getCookie('gem_nickname');
+  if(saved){userNickname=saved;updateNicknameDisplay();}
+}
+function saveUser(nick){
+  userNickname=nick;
+  setCookie('gem_nickname',nick,365); // 1년 유지
+  updateNicknameDisplay();
+}
+function updateNicknameDisplay(){
+  const el=document.getElementById('nicknameDisplay');
+  if(el)el.textContent=userNickname?'👤 '+userNickname:'닉네임 설정';
+}
+
+// ===== 기록 (localStorage) =====
+// key: "gem_rec_{stage}_{diff}" → {time, moves, date}
+function recStorageKey(stage,diff){return 'gem_rec_'+stage+'_'+diff;}
+function saveBestRecord(stage,diff,time,moves){
+  const key=recStorageKey(stage,diff);
+  const prev=getBestRecord(stage,diff);
+  // 시간 기준으로 더 나은 기록만 저장
+  if(!prev||time<prev.time){
+    localStorage.setItem(key,JSON.stringify({time,moves,date:new Date().toLocaleDateString('ko-KR')}));
+    return true; // 신기록
+  }
+  return false;
+}
+function getBestRecord(stage,diff){
+  const s=localStorage.getItem(recStorageKey(stage,diff));
+  return s?JSON.parse(s):null;
+}
+function getAllRecords(){
+  const all={};
+  for(let s=0;s<STAGE_LIST.length;s++){
+    for(let d=1;d<=3;d++){
+      const r=getBestRecord(s,d);
+      if(r)all[recStorageKey(s,d)]={stage:s,diff:d,...r};
+    }
+  }
+  return all;
+}
+
+// ===== 초기화: 메인 페이지에서 시작 =====
+// stages.js 로드 실패 대비
+if(typeof STAGE_LIST==='undefined'){
+  document.body.innerHTML='<div style="color:#fff;padding:40px;font-family:sans-serif;text-align:center;">'+
+    '<h2>스테이지 데이터를 불러오지 못했어요</h2>'+
+    '<p style="color:#8d99ae;margin-top:12px;">stages.js 파일이 같은 폴더에 있는지 확인해주세요.<br>'+
+    '(로컬에서 직접 열면 보안 정책으로 차단될 수 있어요 — 웹 서버로 열어주세요.)</p></div>';
+  throw new Error('STAGE_LIST not loaded');
+}
+
+// 메인 페이지를 가장 먼저 표시 (이후 준비 중 에러가 나도 메인은 보임)
+goMain();
+loadUser();
+renderMainArt();
+// 게임 상태 준비 (메인이 위에 덮여 있음)
+try{
+  resetGame();
+  renderLegend();
+  setStageLabel();
+}catch(e){
+  console.error('게임 초기화 오류:',e);
+}
+
+</script>
+</body>
+</html>
