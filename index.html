@@ -169,6 +169,29 @@
   }
   .zoom-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(17,24,39,0.95); }
 
+  /* 음량 컨트롤 */
+  .vol-control { position: relative; display: inline-block; }
+  .vol-popover {
+    display: none;
+    position: absolute; top: 110%; right: 0; z-index: 50;
+    background: var(--surface, #131a2b);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    align-items: center; gap: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.4);
+  }
+  .vol-popover.show { display: flex; }
+  .vol-mute {
+    background: transparent; border: none; cursor: pointer;
+    font-size: 16px; padding: 2px; line-height: 1;
+  }
+  .vol-popover input[type=range] {
+    width: 100px; accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .vol-val { font-size: 12px; color: var(--muted); min-width: 24px; text-align: right; font-family: 'Space Mono', monospace; }
+
   .panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -594,6 +617,14 @@
     <div class="header-right">
       <span class="move-badge">⏱ <strong id="tc">0:00</strong></span>
       <span class="move-badge">이동 <strong id="mc">0</strong>회</span>
+      <div class="vol-control">
+        <button class="ghost" id="soundToggle" onclick="toggleVolPopover(event)" aria-label="음량 조절" style="padding:6px 10px;">🔊</button>
+        <div class="vol-popover" id="volPopover">
+          <button class="vol-mute" id="volMuteBtn" onclick="toggleSound()" aria-label="음소거">🔊</button>
+          <input type="range" id="volSlider" min="0" max="100" value="70" aria-label="음량">
+          <span class="vol-val" id="volVal">70</span>
+        </div>
+      </div>
       <button class="ghost" onclick="goMain()">메인으로</button>
       <button class="primary" onclick="resetGame()">다시 시작</button>
     </div>
@@ -684,8 +715,16 @@
     <div class="main-art" id="mainArt"></div>
     <button class="primary main-start" id="resumeBtn" onclick="doResume()" style="display:none;">이어하기</button>
     <button class="primary main-start" onclick="startNewGame()">시작하기</button>
-    <div style="margin-top:12px;">
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;align-items:center;">
       <button class="ghost" style="font-size:12px;padding:8px 20px;border-radius:99px;" onclick="openHelp()">❓ 도움말</button>
+      <div class="vol-control">
+        <button class="ghost" id="soundToggleMain" onclick="toggleVolPopoverMain(event)" aria-label="음량 조절" style="font-size:12px;padding:8px 14px;border-radius:99px;">🔊</button>
+        <div class="vol-popover" id="volPopoverMain">
+          <button class="vol-mute" id="volMuteBtnMain" onclick="toggleSound()" aria-label="음소거">🔊</button>
+          <input type="range" id="volSliderMain" min="0" max="100" value="70" aria-label="음량">
+          <span class="vol-val" id="volValMain">70</span>
+        </div>
+      </div>
     </div>
     <div class="main-nick">
       <span id="nicknameDisplay" onclick="openNicknamePopup()" style="cursor:pointer;">닉네임 설정</span>
@@ -1264,7 +1303,8 @@ function stopTimer(){
 
 // ===== 진행 상황 저장/복원 (localStorage) =====
 const SAVE_KEY='gempuzzle_progress_v1';
-function saveProgress(){
+// 실제 저장 (즉시)
+function saveProgressNow(){
   // 완료된 스테이지이거나 게임 중이 아니면 저장 안 함
   if(typeof gems==='undefined'||!gems)return;
   try{
@@ -1282,6 +1322,17 @@ function saveProgress(){
     localStorage.setItem(SAVE_KEY,JSON.stringify(data));
   }catch(e){/* 용량초과 등 무시 */}
 }
+// 디바운스 저장 (연속 이동 시 마지막 한 번만 직렬화)
+let _saveTimer=null;
+function saveProgress(){
+  if(_saveTimer)clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{_saveTimer=null;saveProgressNow();},400);
+}
+// 대기 중인 저장을 즉시 반영 (페이지 이탈·클리어 등)
+function flushProgress(){
+  if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}
+  saveProgressNow();
+}
 function loadProgress(){
   try{
     const s=localStorage.getItem(SAVE_KEY);
@@ -1289,6 +1340,7 @@ function loadProgress(){
   }catch(e){return null;}
 }
 function clearProgress(){
+  if(_saveTimer){clearTimeout(_saveTimer);_saveTimer=null;}
   try{localStorage.removeItem(SAVE_KEY);}catch(e){}
 }
 function hasSavedProgress(){
@@ -1333,7 +1385,7 @@ function resumeProgress(){
 }
 
 // 한 색의 모든 보석이 정답 칸에 들어갔는지 검사 → 새로 완성된 색마다 버퍼 +1
-function checkColorCompletion(){
+function checkColorCompletion(willWin){
   const colorCells={};   // color -> {total, matched}
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     const ans=ANS[r][c];
@@ -1359,11 +1411,12 @@ function checkColorCompletion(){
   if(newlyDone>0){
     const prevBuf=bufSize-3*newlyDone;
     bufSize=Math.min(bufSize,30);   // 최대 30칸
-    startSparkle(doneCells);        // 완성 영역 반짝임
+    // 승리하는 순간엔 개별 색 반짝임 생략 (클리어 시퀀스의 전체 반짝임과 겹침 방지)
+    if(!willWin)startSparkle(doneCells);
     renderBuf();
     unlockBufferAnim(prevBuf, bufSize); // 새로 열린 버퍼 칸 등장 효과
     renderLegend();
-    setStatus(`색 완성! 버퍼가 ${bufSize}칸으로 늘었어요`,true);
+    if(!willWin)setStatus(`색 완성! 버퍼가 ${bufSize}칸으로 늘었어요`,true);
   }
 }
 
@@ -1371,12 +1424,16 @@ function checkColorCompletion(){
 let sparkles=[]; // {r,c,start}
 let sparkleAnimating=false;
 const SPARKLE_DUR=700;
-function startSparkle(cells){
+function startSparkle(cells, perCellDelay){
   const now=performance.now();
+  // perCellDelay 미지정 시 8ms (기존 동작). 전체 반짝임처럼 칸이 많으면 호출부에서 작게 넘김
+  const step=(perCellDelay==null)?8:perCellDelay;
   cells.forEach((cell,i)=>{
-    sparkles.push({r:cell.r,c:cell.c,start:now+i*8}); // 살짝 물결치듯
+    sparkles.push({r:cell.r,c:cell.c,start:now+i*step}); // 살짝 물결치듯
   });
   if(!sparkleAnimating){sparkleAnimating=true;requestAnimationFrame(sparkleLoop);}
+  // 마지막 칸이 반짝임을 끝내는 데 걸리는 총 시간 반환
+  return (cells.length>0?(cells.length-1)*step:0)+SPARKLE_DUR;
 }
 function sparkleLoop(now){
   sparkles=sparkles.filter(s=>(now-s.start)<SPARKLE_DUR);
@@ -1708,12 +1765,36 @@ function zoomAt(clientX,clientY,factor){
 }
 
 // 1배 리셋: 그림이 캔버스 중앙에 오도록
+let _viewTween=null;
 function resetView(){
+  if(_viewTween){cancelAnimationFrame(_viewTween);_viewTween=null;}
   view.scale=1;
   view.x=0; view.y=0;
   clampView();
   updateMinimapVisibility();
   draw();
+}
+
+// 뷰를 목표 상태로 부드럽게 이동 (클리어 시 전체 그림 감상용)
+function animateViewTo(target, dur, onDone){
+  if(_viewTween)cancelAnimationFrame(_viewTween);
+  const from={scale:view.scale, x:view.x, y:view.y};
+  const start=performance.now();
+  // easeInOutCubic
+  const ease=t=>t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  function step(now){
+    let t=(now-start)/dur;
+    if(t>1)t=1;
+    const e=ease(t);
+    view.scale=from.scale+(target.scale-from.scale)*e;
+    view.x=from.x+(target.x-from.x)*e;
+    view.y=from.y+(target.y-from.y)*e;
+    updateMinimapVisibility();
+    draw();
+    if(t<1){_viewTween=requestAnimationFrame(step);}
+    else{_viewTween=null;if(onDone)onDone();}
+  }
+  _viewTween=requestAnimationFrame(step);
 }
 
 function updateMinimapVisibility(){
@@ -2165,8 +2246,10 @@ function handleBufClick(idx){
 }
 
 function checkClear(){
-  checkColorCompletion();
+  // 먼저 승리 여부를 판정 (색 완성 처리 전에)
   const ok=activeCells().every(({r,c})=>gems[r+'_'+c]===ANS[r][c]);
+  // 색 완성 처리: 승리하는 경우엔 개별 색 반짝임을 생략(클리어 시퀀스와 겹침 방지)
+  checkColorCompletion(ok);
   if(ok){
     const elapsed=stopTimer();
     stageCleared.add(currentStage);
@@ -2191,17 +2274,272 @@ function checkClear(){
   }
 }
 
+// ===== 사운드 엔진 (Web Audio API, 코드로 합성 — 외부 파일 없음) =====
+let _audioCtx=null;
+let soundEnabled=true;
+let _masterGain=null, _bgmGain=null;
+let masterVolume=0.7;         // 마스터 음량 0~1 (슬라이더)
+const BGM_VOLUME=0.6;         // 배경음악 상대 볼륨 (마스터에 곱해짐)
+let bgmEnabled=true;
+let _bgmTimer=null;
+let _bgmPlaying=false;
+// 저장된 설정 복원
+try{
+  const sv=localStorage.getItem('gem_sound');
+  if(sv==='off')soundEnabled=false;
+  const vv=localStorage.getItem('gem_volume');
+  if(vv!=null){const n=parseInt(vv,10);if(!isNaN(n))masterVolume=Math.max(0,Math.min(1,n/100));}
+}catch(e){}
+
+// 마스터 게인에 현재 음량 반영 (음소거면 0)
+function applyMasterVolume(){
+  if(_masterGain){
+    const target=soundEnabled?masterVolume:0;
+    try{
+      _masterGain.gain.setTargetAtTime(target,_audioCtx.currentTime,0.02);
+    }catch(e){_masterGain.gain.value=target;}
+  }
+}
+
+// 음소거 토글
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  try{localStorage.setItem('gem_sound',soundEnabled?'on':'off');}catch(e){}
+  applyMasterVolume();
+  updateVolUI();
+  if(soundEnabled){
+    resumeAudio();
+    const mainShown=document.getElementById('main-overlay').classList.contains('show');
+    if(!mainShown)startBgm();
+  }else{
+    stopBgm();
+  }
+}
+
+// 슬라이더로 음량 변경
+function setVolume(v){
+  masterVolume=Math.max(0,Math.min(1,v/100));
+  try{localStorage.setItem('gem_volume',String(Math.round(masterVolume*100)));}catch(e){}
+  // 슬라이더를 0으로 내리면 음소거, 0에서 올리면 음소거 해제
+  if(masterVolume===0){soundEnabled=false;stopBgm();}
+  else if(!soundEnabled){
+    soundEnabled=true;
+    try{localStorage.setItem('gem_sound','on');}catch(e){}
+    resumeAudio();
+    const mainShown=document.getElementById('main-overlay').classList.contains('show');
+    if(!mainShown)startBgm();
+  }
+  applyMasterVolume();
+  updateVolUI();
+}
+
+// 볼륨 팝오버 열기/닫기 (게임 화면)
+function toggleVolPopover(ev){
+  if(ev)ev.stopPropagation();
+  const pop=document.getElementById('volPopover');
+  if(!pop)return;
+  pop.classList.toggle('show');
+  resumeAudio();
+}
+// 볼륨 팝오버 열기/닫기 (메인 화면)
+function toggleVolPopoverMain(ev){
+  if(ev)ev.stopPropagation();
+  const pop=document.getElementById('volPopoverMain');
+  if(!pop)return;
+  pop.classList.toggle('show');
+  resumeAudio();
+}
+// 바깥 클릭 시 팝오버 닫기 (양쪽)
+document.addEventListener('click',(e)=>{
+  document.querySelectorAll('.vol-control').forEach(ctrl=>{
+    const pop=ctrl.querySelector('.vol-popover');
+    if(pop&&pop.classList.contains('show')&&!ctrl.contains(e.target)){
+      pop.classList.remove('show');
+    }
+  });
+});
+
+// 볼륨 UI(아이콘·슬라이더·숫자) 갱신 — 게임/메인 양쪽 컨트롤 모두
+function updateVolUI(){
+  const pct=Math.round(masterVolume*100);
+  const icon=(!soundEnabled||masterVolume===0)?'🔇':(masterVolume<0.5?'🔉':'🔊');
+  const disp=soundEnabled?pct:0;
+  [['soundToggle','volMuteBtn','volSlider','volVal'],
+   ['soundToggleMain','volMuteBtnMain','volSliderMain','volValMain']].forEach(ids=>{
+    const [tb,mb,sl,vv]=ids;
+    const e1=document.getElementById(tb); if(e1)e1.textContent=icon;
+    const e2=document.getElementById(mb); if(e2)e2.textContent=icon;
+    const e3=document.getElementById(sl); if(e3)e3.value=String(disp);
+    const e4=document.getElementById(vv); if(e4)e4.textContent=String(disp);
+  });
+}
+// 하위호환 (기존 호출부)
+function refreshSoundBtn(){updateVolUI();}
+
+function initAudio(){
+  if(_audioCtx)return _audioCtx;
+  try{
+    _audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+    // 오디오 라우팅: 효과음은 masterGain, 배경음악은 bgmGain → masterGain → destination
+    _masterGain=_audioCtx.createGain();
+    _masterGain.gain.value=soundEnabled?masterVolume:0;
+    _masterGain.connect(_audioCtx.destination);
+    _bgmGain=_audioCtx.createGain();
+    _bgmGain.gain.value=BGM_VOLUME;
+    _bgmGain.connect(_masterGain);
+  }catch(e){_audioCtx=null;}
+  return _audioCtx;
+}
+// 사용자 첫 상호작용 시 오디오 컨텍스트 활성화 (브라우저 자동재생 정책)
+function resumeAudio(){
+  const ctx=initAudio();
+  if(ctx&&ctx.state==='suspended')ctx.resume();
+}
+// 단일 음 재생 (주파수, 시작시각, 길이, 음량, 파형, [출력노드])
+function playTone(freq, startAt, dur, gain, type, dest){
+  const ctx=initAudio();
+  if(!ctx||!soundEnabled)return;
+  const t0=ctx.currentTime+startAt;
+  const osc=ctx.createOscillator();
+  const g=ctx.createGain();
+  osc.type=type||'sine';
+  osc.frequency.setValueAtTime(freq,t0);
+  // ADSR 간이 엔벨로프 (부드러운 시작·끝)
+  g.gain.setValueAtTime(0,t0);
+  g.gain.linearRampToValueAtTime(gain,t0+0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+  osc.connect(g);g.connect(dest||_masterGain);
+  osc.start(t0);
+  osc.stop(t0+dur+0.02);
+}
+// 스테이지 클리어: 상승 아르페지오 + 반짝이는 고음
+function playClearSound(){
+  const ctx=initAudio();
+  if(!ctx||!soundEnabled)return;
+  // C major 상승: C5 E5 G5 C6 (승리감)
+  const notes=[523.25, 659.25, 783.99, 1046.50];
+  notes.forEach((f,i)=>{
+    playTone(f, i*0.11, 0.35, 0.18, 'triangle');
+    // 옥타브 아래로 살짝 두께 (하모니)
+    playTone(f/2, i*0.11, 0.30, 0.06, 'sine');
+  });
+  // 마지막에 반짝이는 고음 3개 (별 흩뿌리듯)
+  const sparkle=[1568.0, 2093.0, 1760.0];
+  sparkle.forEach((f,i)=>{
+    playTone(f, 0.5+i*0.08, 0.5, 0.08, 'sine');
+  });
+  // 클리어 사운드 동안 배경음악을 잠깐 낮춤 (덕킹) — 약 2.2초
+  duckBgm(2200);
+}
+
+// ===== 앰비언트 배경음악 (코드로 생성, 무한 반복) =====
+// 피아노풍 음색: 여러 배음을 겹친 부드러운 음 + 긴 릴리즈
+function playPianoNote(freq, startAt, dur, gain){
+  const ctx=initAudio();
+  if(!ctx)return;
+  const t0=ctx.currentTime+startAt;
+  // 배음 3개를 겹쳐 피아노 비슷한 음색
+  const partials=[[1,1.0],[2,0.35],[3,0.15]];
+  const noteGain=ctx.createGain();
+  noteGain.gain.setValueAtTime(0,t0);
+  noteGain.gain.linearRampToValueAtTime(gain,t0+0.04);     // 부드러운 어택
+  noteGain.gain.exponentialRampToValueAtTime(0.0001,t0+dur); // 긴 릴리즈
+  noteGain.connect(_bgmGain);
+  partials.forEach(([mult,amp])=>{
+    const osc=ctx.createOscillator();
+    const g=ctx.createGain();
+    osc.type='sine';
+    osc.frequency.setValueAtTime(freq*mult,t0);
+    g.gain.value=amp;
+    osc.connect(g);g.connect(noteGain);
+    osc.start(t0);
+    osc.stop(t0+dur+0.05);
+  });
+}
+
+// 편안한 화성 진행 (C - Am - F - G), 각 코드마다 아르페지오 + 은은한 상단 멜로디
+// 주파수(Hz): C4=261.63 기준
+const BGM_CHORDS=[
+  // [베이스, 3화음들...]
+  [130.81, 261.63, 329.63, 392.00],  // C  (C E G)
+  [110.00, 261.63, 329.63, 440.00],  // Am (A C E)
+  [174.61, 349.23, 440.00, 523.25],  // F  (F A C)
+  [196.00, 392.00, 493.88, 587.33],  // G  (G B D)
+];
+// 상단 멜로디용 음 후보 (펜타토닉 — 어떤 코드에도 어울림)
+const BGM_MELODY=[523.25, 587.33, 659.25, 783.99, 880.00];
+let _bgmStep=0;
+
+function scheduleBgmBar(){
+  if(!_bgmPlaying)return;
+  const ctx=initAudio();
+  if(!ctx){return;}
+  const chord=BGM_CHORDS[_bgmStep%BGM_CHORDS.length];
+  const BAR=4.0; // 한 코드 4초 (느리고 잔잔하게)
+  // 베이스: 코드 시작에 길게
+  playPianoNote(chord[0], 0, BAR*0.95, 0.22);
+  // 아르페지오: 코드 구성음을 부드럽게 펼침
+  for(let i=1;i<chord.length;i++){
+    playPianoNote(chord[i], 0.3+(i-1)*0.5, 2.4, 0.15);
+  }
+  // 상단 멜로디: 가끔 한두 음 (랜덤, 너무 빽빽하지 않게)
+  if(bgmRnd()<0.7){
+    const m=BGM_MELODY[Math.floor(bgmRnd()*BGM_MELODY.length)];
+    playPianoNote(m, 1.0+bgmRnd()*1.5, 1.8, 0.09);
+  }
+  if(bgmRnd()<0.4){
+    const m=BGM_MELODY[Math.floor(bgmRnd()*BGM_MELODY.length)];
+    playPianoNote(m, 2.5+bgmRnd()*1.0, 1.5, 0.07);
+  }
+  _bgmStep++;
+  // 다음 코드 예약
+  _bgmTimer=setTimeout(scheduleBgmBar, BAR*1000);
+}
+
+// 배경음악 전용 난수 (게임 rng와 분리 — _rngState 오염 방지)
+function bgmRnd(){return Math.random();}
+function startBgm(){
+  const ctx=initAudio();
+  if(!ctx||!soundEnabled||!bgmEnabled)return;
+  if(_bgmPlaying)return;
+  _bgmPlaying=true;
+  scheduleBgmBar();
+}
+function stopBgm(){
+  _bgmPlaying=false;
+  if(_bgmTimer){clearTimeout(_bgmTimer);_bgmTimer=null;}
+}
+
+// 덕킹: 배경음악을 dur(ms) 동안 낮췄다 복귀
+function duckBgm(dur){
+  const ctx=initAudio();
+  if(!ctx||!_bgmGain)return;
+  const now=ctx.currentTime;
+  const low=BGM_VOLUME*0.25;
+  _bgmGain.gain.cancelScheduledValues(now);
+  _bgmGain.gain.setValueAtTime(_bgmGain.gain.value,now);
+  _bgmGain.gain.linearRampToValueAtTime(low, now+0.15);         // 빠르게 낮춤
+  _bgmGain.gain.setValueAtTime(low, now+dur/1000-0.4);          // 유지
+  _bgmGain.gain.linearRampToValueAtTime(BGM_VOLUME, now+dur/1000); // 서서히 복귀
+}
+
 // ===== 클리어 시퀀스: 전체 반짝임 → 폭죽 → 결과창 =====
 function startClearSequence(){
-  // 1단계: 전체 칸 반짝임 (700ms)
   const cells=activeCells();
-  startSparkle(cells);
-  // 2단계: 반짝임 절반 지점에서 폭죽 시작 (300ms 후)
-  setTimeout(()=>{startFireworks();},300);
-  // 3단계: 폭죽+반짝임 충분히 본 후 결과창 (2200ms 후)
+  playClearSound();  // 클리어 사운드
+  // 확대/이동돼 있던 화면을 전체 그림이 보이도록 부드럽게 되돌림 (600ms)
+  animateViewTo({scale:1, x:0, y:0}, 600);
+  // 전체 반짝임 총 시간을 칸 수와 무관하게 ~800ms로 압축
+  const SWEEP=800; // 전체 훑는 시간
+  const perCell=cells.length>1?Math.min(8, SWEEP/(cells.length-1)):0;
+  const sparkleDone=startSparkle(cells, perCell); // 반짝임 완료까지 총 ms
+  // 폭죽은 반짝임이 퍼지는 중간에 시작 (뷰 이동이 어느정도 끝난 뒤)
+  setTimeout(()=>{startFireworks();}, 500);
+  // 결과창: 반짝임이 완전히 끝나고 폭죽도 충분히 본 뒤
+  const resultDelay=Math.max(2200, sparkleDone+600);
   setTimeout(()=>{
     document.getElementById('clear-overlay').classList.add('show');
-  },2200);
+  }, resultDelay);
 }
 
 // ===== 폭죽 파티클 시스템 =====
@@ -2500,6 +2838,8 @@ function openDifficultySelect(){
 }
 
 function startGame(diff){
+  resumeAudio();  // 사용자 상호작용 시점에 오디오 컨텍스트 활성화
+  startBgm();     // 배경음악 시작 (이미 재생 중이면 무시)
   currentDifficulty=diff;
   document.getElementById('diff-overlay').classList.remove('show');
   document.getElementById('stage-overlay').classList.remove('show');
@@ -2564,6 +2904,7 @@ function refreshResumeBtn(){
 
 // 이어하기 실행
 function doResume(){
+  resumeAudio(); startBgm();  // 이어하기 시 배경음악 시작
   document.getElementById('main-overlay').classList.remove('show');
   if(!resumeProgress()){
     // 복원 실패 시 스테이지 선택으로
@@ -2573,6 +2914,7 @@ function doResume(){
 
 // 새 게임: 기존 진행 저장을 지우고 스테이지 선택으로
 function startNewGame(){
+  resumeAudio(); startBgm();  // 시작하기 시 배경음악 시작
   clearProgress();
   openStageSelect();
 }
@@ -2619,19 +2961,30 @@ function updateNicknameDisplay(){
 // ===== 기록 (localStorage) =====
 // key: "gem_rec_{stage}_{diff}" → {time, moves, date}
 function recStorageKey(stage,diff){return 'gem_rec_'+stage+'_'+diff;}
+// 메모리 캐시: 목록 렌더 시 189회 localStorage 읽기 → 캐시 히트로 대체
+const _recCache={};   // key → record | null (null=없음 확정)
 function saveBestRecord(stage,diff,time,moves){
   const key=recStorageKey(stage,diff);
   const prev=getBestRecord(stage,diff);
   // 시간 기준으로 더 나은 기록만 저장
   if(!prev||time<prev.time){
-    localStorage.setItem(key,JSON.stringify({time,moves,date:new Date().toLocaleDateString('ko-KR')}));
+    const rec={time,moves,date:new Date().toLocaleDateString('ko-KR')};
+    localStorage.setItem(key,JSON.stringify(rec));
+    _recCache[key]=rec;   // 캐시 갱신
     return true; // 신기록
   }
   return false;
 }
 function getBestRecord(stage,diff){
-  const s=localStorage.getItem(recStorageKey(stage,diff));
-  return s?JSON.parse(s):null;
+  const key=recStorageKey(stage,diff);
+  if(key in _recCache)return _recCache[key];   // 캐시 히트
+  let rec=null;
+  try{
+    const s=localStorage.getItem(key);
+    rec=s?JSON.parse(s):null;
+  }catch(e){rec=null;}
+  _recCache[key]=rec;   // 없으면 null도 캐시 (재조회 방지)
+  return rec;
 }
 // 난이도별 클리어 여부 = 그 난이도 기록이 존재하면 클리어 (localStorage 기반 → 새로고침 유지)
 function isDiffCleared(stage,diff){
@@ -2688,6 +3041,18 @@ if(typeof STAGE_LIST==='undefined'){
 goMain();
 loadUser();
 renderMainArt();
+refreshSoundBtn();
+updateVolUI();
+// 볼륨 슬라이더 이벤트 연결 (게임/메인 양쪽)
+['volSlider','volSliderMain'].forEach(id=>{
+  const sl=document.getElementById(id);
+  if(sl){
+    sl.value=String(soundEnabled?Math.round(masterVolume*100):0);
+    sl.addEventListener('input',(e)=>setVolume(Number(e.target.value)));
+    sl.addEventListener('click',(e)=>e.stopPropagation());
+  }
+});
+// 배경음악은 '시작하기'/'이어하기' 버튼에서 시작됨 (startNewGame, doResume 참고)
 // 게임 상태 준비 (메인이 위에 덮여 있음)
 try{
   resetGame();
@@ -2696,6 +3061,12 @@ try{
 }catch(e){
   console.error('게임 초기화 오류:',e);
 }
+
+// 페이지 이탈·탭 전환 시 대기 중인 저장을 즉시 반영 (디바운스 유실 방지)
+window.addEventListener('beforeunload',()=>{try{flushProgress();}catch(e){}});
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'){try{flushProgress();}catch(e){}}
+});
 
 </script>
 </body>
