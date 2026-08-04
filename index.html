@@ -547,11 +547,12 @@
     border-radius: 16px;
     padding: 20px;
     width: 100%; max-width: 560px;
-    max-height: 85vh; overflow-y: auto;
+    height: 85vh; max-height: 85vh; overflow: hidden;
+    display: flex; flex-direction: column;
   }
-  .stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; position: sticky; top: 0; background: var(--surface); padding-bottom: 10px; z-index: 1; }
+  .stage-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; background: var(--surface); padding-bottom: 10px; flex-shrink: 0; }
   .stage-title { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700; color: var(--accent); }
-  .stage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+  .stage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; align-content: start; flex: 1; overflow-y: auto; }
   .stage-card {
     background: var(--surface2, #1a2235);
     border: 1px solid var(--border);
@@ -566,6 +567,21 @@
   .stage-card canvas { width: 96px; height: 96px; border-radius: 8px; background: #E8DCC0; image-rendering: pixelated; }
   .stage-card .nm { font-size: 13px; color: var(--text); }
   .stage-card .done-badge { font-size: 11px; color: #38B000; }
+  .stage-filters { margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+  .filter-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .filter-btn {
+    font-family: inherit; font-size: 13px; padding: 6px 14px; border-radius: 99px;
+    border: 1px solid var(--border); background: transparent; color: var(--muted);
+    cursor: pointer; transition: all .15s;
+  }
+  .filter-btn.small { font-size: 12px; padding: 4px 12px; }
+  .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #0b0f1a; font-weight: 700; }
+  .filter-count { font-size: 12px; color: var(--muted); margin-left: auto; }
+  .stage-empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
+  .diff-badges { display: flex; gap: 6px; margin-top: 2px; }
+  .diff-badge { font-size: 14px; opacity: 0.25; filter: grayscale(1); transition: opacity .15s; }
+  .diff-badge.cleared { opacity: 1; filter: none; }
 </style>
 </head>
 <body>
@@ -641,6 +657,21 @@
     <div class="stage-head">
       <div class="stage-title">스테이지 선택</div>
       <button class="ghost" id="stageBack">← 메인</button>
+    </div>
+    <div class="stage-filters">
+      <div class="filter-row" id="catTabs">
+        <button class="filter-btn active" data-cat="all">전체</button>
+        <button class="filter-btn" data-cat="animal">동물·사물</button>
+        <button class="filter-btn" data-cat="carpet">카펫</button>
+        <button class="filter-btn" data-cat="snow">눈결정</button>
+        <button class="filter-btn" data-cat="flag">국기</button>
+      </div>
+      <div class="filter-row" id="doneTabs">
+        <button class="filter-btn small active" data-done="all">모두</button>
+        <button class="filter-btn small" data-done="clear">클리어</button>
+        <button class="filter-btn small" data-done="unclear">미클리어</button>
+        <span class="filter-count" id="filterCount"></span>
+      </div>
     </div>
     <div class="stage-grid" id="stageGrid"></div>
   </div>
@@ -2361,35 +2392,96 @@ function drawStageThumb(canvas,grid){
   }
 }
 
+// 스테이지 카테고리 판정 (표시용 — STAGE_LIST 순서/인덱스는 건드리지 않음)
+function stageCategory(st, i){
+  const n=st.name;
+  if(n.startsWith('카펫'))return 'carpet';
+  if(n.startsWith('눈결정'))return 'snow';
+  if(n.startsWith('국기'))return 'flag';
+  if(['미국','영국','인도','멕시코','스리랑카'].includes(n))return 'flag';
+  return 'animal';
+}
+
+let stageFilterCat='all';
+let stageFilterDone='all';
+
 function openStageSelect(){
+  renderStageGrid();
+  // 필터 버튼 이벤트 (최초 1회만 바인딩)
+  if(!openStageSelect._bound){
+    document.querySelectorAll('#catTabs .filter-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        stageFilterCat=btn.dataset.cat;
+        document.querySelectorAll('#catTabs .filter-btn').forEach(b=>b.classList.toggle('active',b===btn));
+        renderStageGrid();
+      });
+    });
+    document.querySelectorAll('#doneTabs .filter-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        stageFilterDone=btn.dataset.done;
+        document.querySelectorAll('#doneTabs .filter-btn').forEach(b=>b.classList.toggle('active',b===btn));
+        renderStageGrid();
+      });
+    });
+    openStageSelect._bound=true;
+  }
+  document.getElementById('main-overlay').classList.remove('show');
+  document.getElementById('stage-overlay').classList.add('show');
+}
+
+function renderStageGrid(){
   const grid=document.getElementById('stageGrid');
   grid.innerHTML='';
+  let shown=0, total=0;
   STAGE_LIST.forEach((st,i)=>{
+    const cat=stageCategory(st,i);
+    const cleared=isStageCleared(i);
+    // 필터 적용
+    if(stageFilterCat!=='all'&&cat!==stageFilterCat)return;
+    if(stageFilterDone==='clear'&&!cleared)return;
+    if(stageFilterDone==='unclear'&&cleared)return;
+    total++;
     const card=document.createElement('div');
     card.className='stage-card'+(i===currentStage?' active':'');
     const cv=document.createElement('canvas');cv.width=96;cv.height=96;
     drawStageThumb(cv,st.grid);
     const nm=document.createElement('div');nm.className='nm';nm.textContent=(i+1)+'. '+st.name;
     card.appendChild(cv);card.appendChild(nm);
-    // 각 난이도별 최고기록 표시
+    // 난이도별 클리어 배지 (기록 있으면 클리어 표시 + 시간)
     const diffNames=['','🟢','🟡','🔴'];
-    let hasAny=false;
+    const badgeRow=document.createElement('div');badgeRow.className='diff-badges';
+    for(let d=1;d<=3;d++){
+      const r=getBestRecord(i,d);
+      const b=document.createElement('span');
+      b.className='diff-badge'+(r?' cleared':'');
+      b.textContent=diffNames[d];
+      if(r)b.title=fmtTime(r.time)+' · '+r.moves+'회 ('+r.date+')';
+      badgeRow.appendChild(b);
+    }
+    card.appendChild(badgeRow);
+    // 최고기록 상세 (클리어한 난이도만)
     for(let d=1;d<=3;d++){
       const r=getBestRecord(i,d);
       if(r){
-        const b=document.createElement('div');b.className='stage-best';
-        b.textContent=diffNames[d]+' '+fmtTime(r.time)+' · '+r.moves+'회';
-        card.appendChild(b);hasAny=true;
+        const bb=document.createElement('div');bb.className='stage-best';
+        bb.textContent=diffNames[d]+' '+fmtTime(r.time)+' · '+r.moves+'회';
+        card.appendChild(bb);
       }
-    }
-    if(!hasAny&&stageCleared.has(i)){
-      const b=document.createElement('div');b.className='done-badge';b.textContent='✓ 클리어';card.appendChild(b);
     }
     card.addEventListener('click',()=>{selectStage(i);});
     grid.appendChild(card);
+    shown++;
   });
-  document.getElementById('main-overlay').classList.remove('show');
-  document.getElementById('stage-overlay').classList.add('show');
+  // 결과 없음 표시
+  if(shown===0){
+    const e=document.createElement('div');e.className='stage-empty';
+    e.textContent='해당하는 스테이지가 없어요';
+    grid.appendChild(e);
+  }
+  // 카운트 표시 (전체 클리어 진행도 포함)
+  const totalCleared=STAGE_LIST.filter((_,i)=>isStageCleared(i)).length;
+  document.getElementById('filterCount').textContent=
+    shown+'개 표시 · 전체 '+totalCleared+'/'+STAGE_LIST.length+' 클리어';
 }
 
 function selectStage(i){
@@ -2540,6 +2632,20 @@ function saveBestRecord(stage,diff,time,moves){
 function getBestRecord(stage,diff){
   const s=localStorage.getItem(recStorageKey(stage,diff));
   return s?JSON.parse(s):null;
+}
+// 난이도별 클리어 여부 = 그 난이도 기록이 존재하면 클리어 (localStorage 기반 → 새로고침 유지)
+function isDiffCleared(stage,diff){
+  return !!getBestRecord(stage,diff);
+}
+// 스테이지가 하나 이상의 난이도로 클리어됐는지
+function isStageCleared(stage){
+  return isDiffCleared(stage,1)||isDiffCleared(stage,2)||isDiffCleared(stage,3);
+}
+// 클리어한 난이도 목록 (예: [1,3])
+function clearedDiffs(stage){
+  const out=[];
+  for(let d=1;d<=3;d++)if(isDiffCleared(stage,d))out.push(d);
+  return out;
 }
 function getAllRecords(){
   const all={};
