@@ -651,7 +651,8 @@
     <div class="main-logo">GEM<span>PUZZLE</span></div>
     <div class="main-tagline">흩어진 보석을 옮겨 그림을 완성하세요</div>
     <div class="main-art" id="mainArt"></div>
-    <button class="primary main-start" onclick="openStageSelect()">시작하기</button>
+    <button class="primary main-start" id="resumeBtn" onclick="doResume()" style="display:none;">이어하기</button>
+    <button class="primary main-start" onclick="startNewGame()">시작하기</button>
     <div style="margin-top:12px;">
       <button class="ghost" style="font-size:12px;padding:8px 20px;border-radius:99px;" onclick="openHelp()">❓ 도움말</button>
     </div>
@@ -763,11 +764,16 @@
 // 그리드 크기는 스테이지마다 가변 (32x32 또는 48x48 등)
 // GRID_SIZE(512, 화면상 그림 크기)는 고정, SZ = GRID_SIZE/COLS 로 계산
 let SZ=16, COLS=32, ROWS=32;
-const GRID_PX=512; // 화면상 그림이 차지하는 픽셀 (고정)
+let OFF_X=0, OFF_Y=0; // 직사각 그리드 중앙 정렬용 추가 오프셋
+const GRID_PX=512; // 화면상 그림이 차지하는 픽셀 (고정, 정사각 영역)
 function applyStageSize(grid){
   ROWS=grid.length;
   COLS=grid[0].length;
-  SZ=GRID_PX/COLS; // 셀 픽셀 크기 (열 수에 맞춰 자동)
+  // 셀 크기는 가로/세로 중 큰 쪽에 맞춰 그림 전체가 512 영역에 들어가도록
+  SZ=GRID_PX/Math.max(COLS,ROWS);
+  // 그림이 512 영역 안에서 가로·세로 모두 중앙에 오도록 오프셋 계산
+  OFF_X=(GRID_PX-COLS*SZ)/2;
+  OFF_Y=(GRID_PX-ROWS*SZ)/2;
 }
 const PAL={0:null,1:'#FF4D6D',2:'#C9184A',3:'#7A1030',4:'#FF9500',5:'#E85D00',6:'#A64F00',7:'#FFF44F',8:'#FFC400',9:'#D4A373',10:'#8DEB00',11:'#2E9E00',12:'#0A6E33',13:'#1FC3F0',14:'#0062D6',15:'#03045E',16:'#E0179E',17:'#7B2FD6',18:'#3F37C9',19:'#EAD0A8',20:'#9C6B3D',21:'#5A3A28',22:'#FFC6FF',23:'#FF9EB8',24:'#E81E63',25:'#FFFFFF',26:'#8D99AE',27:'#1A1A1A'};
 const CNAME={1:'밝은빨강',2:'빨강',3:'진빨강',4:'귤색',5:'주황',6:'갈주황',7:'레몬',8:'노랑',9:'토스트',10:'라임',11:'초록',12:'딥그린',13:'하늘',14:'파랑',15:'네이비',16:'난초',17:'보라',18:'미드나잇',19:'베이지',20:'갈색',21:'다크초코',22:'베이비핑크',23:'분홍',24:'진분홍',25:'흰색',26:'회색',27:'검정'};
@@ -1225,6 +1231,76 @@ function stopTimer(){
   return timerElapsed;
 }
 
+// ===== 진행 상황 저장/복원 (localStorage) =====
+const SAVE_KEY='gempuzzle_progress_v1';
+function saveProgress(){
+  // 완료된 스테이지이거나 게임 중이 아니면 저장 안 함
+  if(typeof gems==='undefined'||!gems)return;
+  try{
+    const data={
+      stage:currentStage,
+      difficulty:currentDifficulty,
+      gems:gems,
+      buf:buf,
+      moves:moves,
+      bufSize:bufSize,
+      completed:Array.from(completedColors),
+      elapsed:timerElapsed,
+      savedAt:Date.now()
+    };
+    localStorage.setItem(SAVE_KEY,JSON.stringify(data));
+  }catch(e){/* 용량초과 등 무시 */}
+}
+function loadProgress(){
+  try{
+    const s=localStorage.getItem(SAVE_KEY);
+    return s?JSON.parse(s):null;
+  }catch(e){return null;}
+}
+function clearProgress(){
+  try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+}
+function hasSavedProgress(){
+  const p=loadProgress();
+  return p&&p.gems&&typeof p.stage==='number'&&p.stage>=0&&p.stage<STAGE_LIST.length;
+}
+
+// 저장된 진행을 실제 게임에 복원
+function resumeProgress(){
+  const p=loadProgress();
+  if(!p)return false;
+  // 저장 이후 stages.js가 바뀌었을 수 있으니 유효성 검사
+  if(typeof p.stage!=='number'||p.stage<0||p.stage>=STAGE_LIST.length||!p.gems){
+    clearProgress();
+    return false;
+  }
+  currentStage=p.stage;
+  currentDifficulty=p.difficulty;
+  ANS=STAGE_LIST[currentStage].grid;
+  applyStageSize(ANS);
+  gems=p.gems;
+  buf=p.buf||[];
+  moves=p.moves||0;
+  bufSize=p.bufSize||12;
+  completedColors=new Set(p.completed||[]);
+  selected=null;selCluster=null;selBufIndices=[];
+  particles=[];sparkles=[];fireworksAnimating=false;sparkleAnimating=false;
+  document.getElementById('mc').textContent=String(moves);
+  setStatus('이어서 진행합니다',false);
+  renderBuf();draw();
+  if(typeof renderLegend==='function')renderLegend();
+  // 타이머를 저장된 경과시간부터 이어서
+  timerStart=performance.now()-(p.elapsed||0);
+  timerElapsed=p.elapsed||0;
+  if(timerId)clearInterval(timerId);
+  document.getElementById('tc').textContent=fmtTime(timerElapsed);
+  timerId=setInterval(()=>{
+    timerElapsed=performance.now()-timerStart;
+    document.getElementById('tc').textContent=fmtTime(timerElapsed);
+  },500);
+  return true;
+}
+
 // 한 색의 모든 보석이 정답 칸에 들어갔는지 검사 → 새로 완성된 색마다 버퍼 +1
 function checkColorCompletion(){
   const colorCells={};   // color -> {total, matched}
@@ -1281,7 +1357,7 @@ function drawSparkles(now){
   for(const s of sparkles){
     const t=(now-s.start)/SPARKLE_DUR;
     if(t<0||t>1)continue;
-    const x=s.c*SZ+GRID_OFFSET, y=s.r*SZ+GRID_OFFSET;
+    const x=s.c*SZ+GRID_OFFSET+OFF_X, y=s.r*SZ+GRID_OFFSET+OFF_Y;
     // 밝은 흰빛이 차올랐다 사라짐 (sin 곡선)
     const a=Math.sin(t*Math.PI)*0.85;
     ctx.fillStyle='rgba(255,255,255,'+a+')';
@@ -1424,9 +1500,9 @@ let animating=false;
 const ANIM_DUR=160;     // 개별 보석 이동 시간(ms)
 const ANIM_STAGGER=70;  // 보석 사이 출발 간격(ms) → 슉슉슉 순차 느낌
 
-function cellPx(r,c){return {x:c*SZ+GRID_OFFSET, y:r*SZ+GRID_OFFSET};}
+function cellPx(r,c){return {x:c*SZ+GRID_OFFSET+OFF_X, y:r*SZ+GRID_OFFSET+OFF_Y};}
 // 버퍼는 캔버스 아래(그림 아래쪽 중앙)
-function bufferEdgePx(){return {x:CV_SIZE/2-SZ/2, y:GRID_OFFSET+GRID_SIZE-SZ};}
+function bufferEdgePx(){return {x:CV_SIZE/2-SZ/2, y:GRID_OFFSET+OFF_Y+ROWS*SZ-SZ};}
 
 function easeOut(t){return 1-Math.pow(1-t,3);}
 
@@ -1483,7 +1559,7 @@ function draw(){
     for(let c=0;c<COLS;c++){
       const ansId=ANS[r][c];
       if(ansId===0)continue; // 배경은 이미 베이지
-      const x=c*SZ+GRID_OFFSET, y=r*SZ+GRID_OFFSET;
+      const x=c*SZ+GRID_OFFSET+OFF_X, y=r*SZ+GRID_OFFSET+OFF_Y;
       const k=r+'_'+c;
       let gemId=gems[k];
       if(hideKeys.has(k))gemId=undefined; // 도착 중 → 비워 보이게
@@ -1533,7 +1609,7 @@ function draw(){
       const k=r+'_'+c;
       const gemId=gems[k];
       if(gemId===undefined||hide.has(k))return;
-      const x=c*SZ+GRID_OFFSET, y=r*SZ+GRID_OFFSET;
+      const x=c*SZ+GRID_OFFSET+OFF_X, y=r*SZ+GRID_OFFSET+OFF_Y;
       const matched=(gemId===ANS[r][c]);
       drawGem(x,y,gemId,true,matched);
     });
@@ -1568,10 +1644,11 @@ function clampView(){
   // 확대 시: 모서리가 화면 중앙까지 올 수 있도록 여유 허용
   // pan 제한: 그림 바깥으로 CV_SIZE/2만큼 추가 여유
   const slack=CV_SIZE/2;
-  const minX=-(GRID_OFFSET+GRID_SIZE)*view.scale+CV_SIZE-slack;
-  const maxX= GRID_OFFSET*view.scale+slack;
-  const minY=-(GRID_OFFSET+GRID_SIZE)*view.scale+CV_SIZE-slack;
-  const maxY= GRID_OFFSET*view.scale+slack;
+  const gW=COLS*SZ, gH=ROWS*SZ;
+  const minX=-(GRID_OFFSET+OFF_X+gW)*view.scale+CV_SIZE-slack;
+  const maxX= (GRID_OFFSET+OFF_X)*view.scale+slack;
+  const minY=-(GRID_OFFSET+OFF_Y+gH)*view.scale+CV_SIZE-slack;
+  const maxY= (GRID_OFFSET+OFF_Y)*view.scale+slack;
   view.x=Math.max(minX,Math.min(maxX,view.x));
   view.y=Math.max(minY,Math.min(maxY,view.y));
 }
@@ -1615,7 +1692,7 @@ function updateMinimapVisibility(){
 
 // 탭 보정: 월드 좌표 → 가장 적절한 칸 (GRID_OFFSET 반영, 현재 동작에 유효한 칸 우선)
 function worldToCell(wx,wy){
-  const lx=wx-GRID_OFFSET, ly=wy-GRID_OFFSET;
+  const lx=wx-GRID_OFFSET-OFF_X, ly=wy-GRID_OFFSET-OFF_Y;
   const col=Math.floor(lx/SZ), row=Math.floor(ly/SZ);
 
   // 현재 선택 상태에서 "이 칸이 동작 가능한가"를 판정
@@ -1755,7 +1832,7 @@ cv.addEventListener('pointermove',e=>{
   if(e.pointerType==='touch')return;   // 터치는 hover 개념 없음
   const w=screenToWorld(e.clientX,e.clientY);
   // 그리드 로컬 좌표
-  const lx=w.x-GRID_OFFSET, ly=w.y-GRID_OFFSET;
+  const lx=w.x-GRID_OFFSET-OFF_X, ly=w.y-GRID_OFFSET-OFF_Y;
   const c=Math.floor(lx/SZ), r=Math.floor(ly/SZ);
   if(r<0||r>=ROWS||c<0||c>=COLS||ANS[r][c]===0){
     if(hoverCell){hoverCell=null;refreshStatusAfterHover();}
@@ -1830,13 +1907,13 @@ function drawMinimap(){
   const sc=W/CV_SIZE;
   // 그림 영역 배경
   mmCtx.fillStyle='#E8DCC0';
-  mmCtx.fillRect(GRID_OFFSET*sc,GRID_OFFSET*sc,GRID_SIZE*sc,GRID_SIZE*sc);
+  mmCtx.fillRect((GRID_OFFSET+OFF_X)*sc,(GRID_OFFSET+OFF_Y)*sc,COLS*SZ*sc,ROWS*SZ*sc);
   // 활성 칸
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
     const ans=ANS[r][c];if(ans===0)continue;
     const g=gems[r+'_'+c];
     mmCtx.fillStyle=g!==undefined?PAL[g]:PAL[ans];
-    mmCtx.fillRect((c*SZ+GRID_OFFSET)*sc, (r*SZ+GRID_OFFSET)*sc, SZ*sc+0.5, SZ*sc+0.5);
+    mmCtx.fillRect((c*SZ+GRID_OFFSET+OFF_X)*sc, (r*SZ+GRID_OFFSET+OFF_Y)*sc, SZ*sc+0.5, SZ*sc+0.5);
   }
   // 현재 보이는 영역 사각형 (CV_SIZE 기준)
   const vx=-view.x/view.scale, vy=-view.y/view.scale;
@@ -2062,6 +2139,7 @@ function checkClear(){
   if(ok){
     const elapsed=stopTimer();
     stageCleared.add(currentStage);
+    clearProgress();  // 클리어 시 이어하기 저장 삭제
     recordResult(currentStage, elapsed, moves);
     // localStorage 최고기록 갱신
     const isNew=saveBestRecord(currentStage,currentDifficulty,elapsed,moves);
@@ -2245,7 +2323,7 @@ function setStatus(t,active){
   }
   el.classList.toggle('active',!!active);
 }
-function upMoves(){document.getElementById('mc').textContent=moves;}
+function upMoves(){document.getElementById('mc').textContent=moves;saveProgress();}
 
 // legend (완성 상태 반영)
 function renderLegend(){
@@ -2382,6 +2460,29 @@ function goMain(){
   document.getElementById('diff-overlay').classList.remove('show');
   document.getElementById('clear-overlay').classList.remove('show');
   document.getElementById('main-overlay').classList.add('show');
+  refreshResumeBtn();
+}
+
+// 이어하기 버튼 표시 여부 갱신
+function refreshResumeBtn(){
+  const btn=document.getElementById('resumeBtn');
+  if(!btn)return;
+  btn.style.display=hasSavedProgress()?'':'none';
+}
+
+// 이어하기 실행
+function doResume(){
+  document.getElementById('main-overlay').classList.remove('show');
+  if(!resumeProgress()){
+    // 복원 실패 시 스테이지 선택으로
+    openStageSelect();
+  }
+}
+
+// 새 게임: 기존 진행 저장을 지우고 스테이지 선택으로
+function startNewGame(){
+  clearProgress();
+  openStageSelect();
 }
 
 // 메인 페이지 미리보기 아트 (대표 스테이지 3개 썸네일)
