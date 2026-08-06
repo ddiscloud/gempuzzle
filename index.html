@@ -606,6 +606,43 @@
   .diff-badge { font-size: 14px; opacity: 0.25; filter: grayscale(1); transition: opacity .15s; }
   .diff-badge.cleared { opacity: 1; filter: none; }
 </style>
+<!-- ===== Firebase 연동 (구글 로그인 + Firestore 클라우드 동기화) ===== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB78Lkd2GhT9KbK-zDyApxY5Eukoh8wqGQ",
+  authDomain: "gempuzzle-6dc19.firebaseapp.com",
+  projectId: "gempuzzle-6dc19",
+  storageBucket: "gempuzzle-6dc19.firebasestorage.app",
+  messagingSenderId: "214699506894",
+  appId: "1:214699506894:web:c395737aa37647af74e49f"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+// 게임 코드(비모듈 스크립트)에서 접근할 수 있도록 window에 노출
+window._fb = {
+  auth, db, provider, signInWithPopup, signOut,
+  doc, getDoc, setDoc, collection, getDocs,
+  currentUser: null
+};
+
+// 로그인 상태 변화 감지
+onAuthStateChanged(auth, (user)=>{
+  window._fb.currentUser = user;
+  if(typeof window.onAuthChanged==='function'){
+    window.onAuthChanged(user);
+  }
+});
+</script>
 </head>
 <body>
 <div class="page">
@@ -728,6 +765,17 @@
     </div>
     <div class="main-nick">
       <span id="nicknameDisplay" onclick="openNicknamePopup()" style="cursor:pointer;">닉네임 설정</span>
+    </div>
+    <div class="main-auth" id="mainAuth" style="margin-top:14px;">
+      <button class="ghost" id="loginBtn" onclick="doLogin()" style="font-size:13px;padding:8px 18px;border-radius:99px;display:none;">
+        <span style="vertical-align:middle;">🔓 구글로 로그인</span>
+      </button>
+      <div id="userInfo" style="display:none;align-items:center;gap:8px;justify-content:center;">
+        <img id="userPhoto" src="" alt="" style="width:24px;height:24px;border-radius:50%;display:none;">
+        <span id="userName" style="font-size:13px;color:var(--muted);"></span>
+        <button class="ghost" onclick="doLogout()" style="font-size:12px;padding:4px 12px;border-radius:99px;">로그아웃</button>
+      </div>
+      <div id="syncStatus" style="font-size:11px;color:var(--muted);margin-top:6px;min-height:14px;"></div>
     </div>
   </div>
 </div>
@@ -1413,6 +1461,7 @@ function checkColorCompletion(willWin){
     bufSize=Math.min(bufSize,30);   // 최대 30칸
     // 승리하는 순간엔 개별 색 반짝임 생략 (클리어 시퀀스의 전체 반짝임과 겹침 방지)
     if(!willWin)startSparkle(doneCells);
+    if(!willWin)playColorDoneSound();  // 색 완성 효과음 (승리 시엔 클리어음이 대신)
     renderBuf();
     unlockBufferAnim(prevBuf, bufSize); // 새로 열린 버퍼 칸 등장 효과
     renderLegend();
@@ -2412,6 +2461,34 @@ function playTone(freq, startAt, dur, gain, type, dest){
   osc.start(t0);
   osc.stop(t0+dur+0.02);
 }
+// ===== 게임 효과음 (짧고 은은하게 — 배경음악/클리어음 방해 안 하도록) =====
+// 보석 이동: 아주 짧고 부드러운 딸깍 (낮은 볼륨)
+let _lastMoveSnd=0;
+function playMoveSound(){
+  const ctx=initAudio();
+  if(!ctx||!soundEnabled)return;
+  // 연타 시 소리 겹침 방지 (최소 40ms 간격)
+  const now=performance.now();
+  if(now-_lastMoveSnd<40)return;
+  _lastMoveSnd=now;
+  // 짧은 목재풍 톡 소리 (약간의 음정 랜덤으로 단조로움 방지)
+  const base=440+Math.random()*80;
+  playTone(base, 0, 0.06, 0.05, 'sine');
+}
+// 색 완성: 짧고 경쾌한 2음 상승 (성취감, 그러나 작게)
+function playColorDoneSound(){
+  const ctx=initAudio();
+  if(!ctx||!soundEnabled)return;
+  playTone(659.25, 0,    0.12, 0.08, 'triangle'); // E5
+  playTone(987.77, 0.07, 0.16, 0.07, 'triangle'); // B5
+}
+// UI 클릭: 매우 짧고 낮은 틱
+function playClickSound(){
+  const ctx=initAudio();
+  if(!ctx||!soundEnabled)return;
+  playTone(330, 0, 0.04, 0.04, 'sine');
+}
+
 // 스테이지 클리어: 상승 아르페지오 + 반짝이는 고음
 function playClearSound(){
   const ctx=initAudio();
@@ -2692,7 +2769,7 @@ function setStatus(t,active){
   }
   el.classList.toggle('active',!!active);
 }
-function upMoves(){document.getElementById('mc').textContent=moves;saveProgress();}
+function upMoves(){document.getElementById('mc').textContent=moves;saveProgress();playMoveSound();}
 
 // legend (완성 상태 반영)
 function renderLegend(){
@@ -2942,6 +3019,115 @@ function getCookie(name){
   return m?decodeURIComponent(m[1]):null;
 }
 
+// ===== Firebase 인증 + 클라우드 동기화 =====
+function setSyncStatus(msg){
+  const el=document.getElementById('syncStatus');
+  if(el)el.textContent=msg||'';
+}
+// 로그인 버튼
+function doLogin(){
+  if(!window._fb){setSyncStatus('로그인 준비 중… 잠시 후 다시 시도해주세요');return;}
+  setSyncStatus('로그인 창을 여는 중…');
+  window._fb.signInWithPopup(window._fb.auth, window._fb.provider)
+    .then(()=>{ /* onAuthChanged가 처리 */ })
+    .catch((e)=>{
+      if(e && e.code==='auth/popup-closed-by-user')setSyncStatus('');
+      else setSyncStatus('로그인에 실패했어요. 다시 시도해주세요');
+    });
+}
+function doLogout(){
+  if(!window._fb)return;
+  window._fb.signOut(window._fb.auth).then(()=>{setSyncStatus('로그아웃했어요');});
+}
+// 로그인 상태 변화 시 호출 (window에 노출 → 모듈 스크립트가 부름)
+window.onAuthChanged=function(user){
+  const loginBtn=document.getElementById('loginBtn');
+  const userInfo=document.getElementById('userInfo');
+  const userName=document.getElementById('userName');
+  const userPhoto=document.getElementById('userPhoto');
+  if(user){
+    // 로그인됨
+    if(loginBtn)loginBtn.style.display='none';
+    if(userInfo)userInfo.style.display='flex';
+    if(userName)userName.textContent=user.displayName||user.email||'로그인됨';
+    if(userPhoto&&user.photoURL){userPhoto.src=user.photoURL;userPhoto.style.display='';}
+    // 닉네임이 없으면 구글 이름으로 자동 설정
+    if(!userNickname&&user.displayName){saveUser(user.displayName.slice(0,12));}
+    // 클라우드 데이터와 동기화
+    syncFromCloud();
+  }else{
+    // 로그아웃 상태
+    if(loginBtn)loginBtn.style.display='';
+    if(userInfo)userInfo.style.display='none';
+    if(userPhoto){userPhoto.src='';userPhoto.style.display='none';}
+    setSyncStatus('');
+  }
+};
+
+// 로그인 시: 클라우드 데이터를 불러와 로컬과 병합
+async function syncFromCloud(){
+  const fb=window._fb; if(!fb||!fb.currentUser)return;
+  setSyncStatus('클라우드에서 불러오는 중…');
+  try{
+    const uid=fb.currentUser.uid;
+    // 1) 기록 동기화: 클라우드 records를 읽어 로컬보다 좋은 기록이면 반영
+    const recCol=fb.collection(fb.db,'users',uid,'records');
+    const snap=await fb.getDocs(recCol);
+    let pulled=0;
+    snap.forEach(d=>{
+      const data=d.data(); // {stage,diff,time,moves,date}
+      if(data&&typeof data.stage==='number'&&typeof data.diff==='number'){
+        const localKey=recStorageKey(data.stage,data.diff);
+        let local=null;
+        try{const s=localStorage.getItem(localKey);local=s?JSON.parse(s):null;}catch(e){}
+        // 클라우드가 더 좋은 기록(짧은 시간)이면 로컬에 반영
+        if(!local||(data.time!=null&&data.time<local.time)){
+          localStorage.setItem(localKey,JSON.stringify({time:data.time,moves:data.moves,date:data.date}));
+          if(window._recCache)window._recCache[localKey]={time:data.time,moves:data.moves,date:data.date};
+          pulled++;
+        }
+      }
+    });
+    // 2) 로컬 기록을 클라우드로 밀어올리기 (클라우드에 없거나 로컬이 더 좋은 경우)
+    await pushLocalRecordsToCloud();
+    setSyncStatus(pulled>0?`클라우드 기록 ${pulled}개 동기화됨`:'동기화 완료');
+    // 목록이 열려있으면 갱신
+    if(typeof renderStageGrid==='function'){
+      const so=document.getElementById('stage-overlay');
+      if(so&&so.classList.contains('show'))renderStageGrid();
+    }
+  }catch(e){
+    setSyncStatus('동기화 중 문제가 생겼어요 (로컬은 정상)');
+  }
+}
+
+// 로컬의 모든 기록을 클라우드에 업로드
+async function pushLocalRecordsToCloud(){
+  const fb=window._fb; if(!fb||!fb.currentUser)return;
+  const uid=fb.currentUser.uid;
+  const tasks=[];
+  for(let s=0;s<STAGE_LIST.length;s++){
+    for(let d=1;d<=3;d++){
+      let local=null;
+      try{const raw=localStorage.getItem(recStorageKey(s,d));local=raw?JSON.parse(raw):null;}catch(e){}
+      if(local){
+        const ref=fb.doc(fb.db,'users',uid,'records',s+'_'+d);
+        tasks.push(fb.setDoc(ref,{stage:s,diff:d,time:local.time,moves:local.moves,date:local.date},{merge:true}));
+      }
+    }
+  }
+  await Promise.allSettled(tasks);
+}
+
+// 신기록 저장 시 클라우드에도 반영 (로그인 상태면)
+function cloudSaveRecord(stage,diff,rec){
+  const fb=window._fb; if(!fb||!fb.currentUser)return;
+  try{
+    const ref=fb.doc(fb.db,'users',fb.currentUser.uid,'records',stage+'_'+diff);
+    fb.setDoc(ref,{stage,diff,time:rec.time,moves:rec.moves,date:rec.date},{merge:true});
+  }catch(e){/* 실패해도 로컬은 유지 */}
+}
+
 // ===== 사용자 닉네임 =====
 let userNickname=null;
 function loadUser(){
@@ -2963,6 +3149,7 @@ function updateNicknameDisplay(){
 function recStorageKey(stage,diff){return 'gem_rec_'+stage+'_'+diff;}
 // 메모리 캐시: 목록 렌더 시 189회 localStorage 읽기 → 캐시 히트로 대체
 const _recCache={};   // key → record | null (null=없음 확정)
+window._recCache=_recCache;   // 클라우드 동기화에서 접근
 function saveBestRecord(stage,diff,time,moves){
   const key=recStorageKey(stage,diff);
   const prev=getBestRecord(stage,diff);
@@ -2971,6 +3158,7 @@ function saveBestRecord(stage,diff,time,moves){
     const rec={time,moves,date:new Date().toLocaleDateString('ko-KR')};
     localStorage.setItem(key,JSON.stringify(rec));
     _recCache[key]=rec;   // 캐시 갱신
+    if(typeof cloudSaveRecord==='function')cloudSaveRecord(stage,diff,rec); // 클라우드에도 (로그인 시)
     return true; // 신기록
   }
   return false;
@@ -3043,6 +3231,8 @@ loadUser();
 renderMainArt();
 refreshSoundBtn();
 updateVolUI();
+// 로그인 버튼 기본 노출 (Firebase가 로드되면 onAuthChanged가 상태에 맞게 갱신)
+(function(){const lb=document.getElementById('loginBtn');if(lb)lb.style.display='';})();
 // 볼륨 슬라이더 이벤트 연결 (게임/메인 양쪽)
 ['volSlider','volSliderMain'].forEach(id=>{
   const sl=document.getElementById(id);
@@ -3066,6 +3256,15 @@ try{
 window.addEventListener('beforeunload',()=>{try{flushProgress();}catch(e){}});
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='hidden'){try{flushProgress();}catch(e){}}
+});
+
+// 버튼 클릭 효과음 (전역 위임 — 모든 <button>에 짧은 틱)
+document.addEventListener('click',(e)=>{
+  const btn=e.target.closest('button');
+  if(!btn)return;
+  // 볼륨 슬라이더나 음소거 버튼 자체는 제외 (조작 중 소리 겹침 방지)
+  if(btn.id==='volMuteBtn'||btn.id==='volMuteBtnMain')return;
+  playClickSound();
 });
 
 </script>
