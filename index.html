@@ -3170,8 +3170,7 @@ window.onAuthChanged=function(user){
     if(userInfo)userInfo.style.display='flex';
     if(userName)userName.textContent=user.displayName||user.email||'로그인됨';
     if(userPhoto&&user.photoURL){userPhoto.src=user.photoURL;userPhoto.style.display='';}
-    // 닉네임이 없으면 구글 이름으로 자동 설정
-    if(!userNickname&&user.displayName){saveUser(user.displayName.slice(0,12));}
+    // (구글 이름을 닉네임으로 자동 설정하지 않음 — 사용자가 직접 설정)
     // 클라우드 데이터와 동기화
     syncFromCloud();
   }else{
@@ -3256,7 +3255,10 @@ function submitRanking(stage,diff,time,moves){
   const fb=window._fb; if(!fb||!fb.currentUser)return;
   try{
     const uid=fb.currentUser.uid;
-    const nick=(userNickname||fb.currentUser.displayName||'익명').slice(0,12);
+    // 닉네임 우선순위: 직접 설정한 닉네임 → 없으면 uid 앞 5글자 (구글 이름은 쓰지 않음)
+    const nick=(userNickname&&userNickname.trim())
+      ? userNickname.trim().slice(0,12)
+      : ('#'+uid.slice(0,5));
     const id=stage+'_'+diff+'_'+uid;
     const ref=fb.doc(fb.db,'rankings',id);
     // 기존 기록보다 좋을 때만 갱신하도록, 먼저 읽고 비교
