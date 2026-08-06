@@ -622,6 +622,13 @@
   .stage-card canvas { width: 96px; height: 96px; border-radius: 8px; background: #E8DCC0; image-rendering: pixelated; }
   .stage-card .nm { font-size: 13px; color: var(--text); }
   .stage-card .done-badge { font-size: 11px; color: #38B000; }
+  .stage-rank-btn {
+    margin-top: 8px; font-family: inherit; font-size: 11px;
+    padding: 4px 12px; border-radius: 99px;
+    border: 1px solid var(--border); background: transparent; color: var(--muted);
+    cursor: pointer; transition: all .15s;
+  }
+  .stage-rank-btn:hover { border-color: var(--accent); color: var(--accent); }
   .stage-filters { margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
   .filter-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .filter-btn {
@@ -744,7 +751,8 @@ onAuthStateChanged(auth, (user)=>{
       <div class="clear-stat"><div class="cs-label">시간</div><div class="cs-value" id="clear-time">0:00</div></div>
       <div class="clear-stat"><div class="cs-label">이동</div><div class="cs-value" id="clear-moves">0회</div></div>
     </div>
-    <div id="clear-best" style="font-size:13px;color:var(--muted);margin-bottom:16px;min-height:18px;"></div>
+    <div id="clear-best" style="font-size:13px;color:var(--muted);margin-bottom:8px;min-height:18px;"></div>
+    <div id="clear-rank" style="font-size:14px;color:var(--accent);margin-bottom:16px;min-height:18px;font-weight:700;"></div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
       <button class="ghost" onclick="openRanking(currentStage,currentDifficulty)">🏆 랭킹</button>
       <button class="ghost" onclick="document.getElementById('clear-overlay').classList.remove('show');openStageSelect()">스테이지 목록</button>
@@ -2393,8 +2401,36 @@ function checkClear(){
         recEl.style.color='';
       } else recEl.textContent='';
     }
+    // 내 순위 표시 (로그인 시, 랭킹 제출 후 조회)
+    showMyRank(currentStage,currentDifficulty);
     startClearSequence();
   }
+}
+
+// 클리어 후 내 순위를 조회해 결과창에 표시
+async function showMyRank(stage,diff){
+  const el=document.getElementById('clear-rank');
+  if(!el)return;
+  el.textContent='';
+  const fb=window._fb;
+  if(!fb||!fb.currentUser){
+    el.textContent='';   // 비로그인 시 표시 안 함
+    return;
+  }
+  el.textContent='순위 확인 중…';
+  el.style.color='var(--muted)';
+  // 제출이 반영될 시간을 살짝 주고 조회
+  setTimeout(async ()=>{
+    const rows=await fetchRankings(stage,diff,'time');
+    if(!rows||rows.length===0){el.textContent='';return;}
+    const uid=fb.currentUser.uid;
+    const idx=rows.findIndex(r=>r.uid===uid);
+    if(idx<0){el.textContent='';return;}
+    const rank=idx+1;
+    const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
+    el.style.color='var(--accent)';
+    el.textContent=medal+' 현재 '+rank+'위'+(rows.length>=20?' (상위 20위 중)':' / '+rows.length+'명 중');
+  },900);
 }
 
 // ===== 사운드 엔진 (Web Audio API, 코드로 합성 — 외부 파일 없음) =====
@@ -2957,6 +2993,15 @@ function renderStageGrid(){
         card.appendChild(bb);
       }
     }
+    // 랭킹 보기 버튼 (클리어 안 해도 순위 확인 가능)
+    const rankBtn=document.createElement('button');
+    rankBtn.className='stage-rank-btn';
+    rankBtn.textContent='🏆 랭킹';
+    rankBtn.addEventListener('click',(e)=>{
+      e.stopPropagation();   // 카드 클릭(스테이지 선택)과 분리
+      openRanking(i,1);      // 기본 쉬움 탭으로
+    });
+    card.appendChild(rankBtn);
     card.addEventListener('click',()=>{selectStage(i);});
     grid.appendChild(card);
     shown++;
