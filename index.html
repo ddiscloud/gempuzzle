@@ -3230,8 +3230,11 @@ async function pushLocalRecordsToCloud(){
       let local=null;
       try{const raw=localStorage.getItem(recStorageKey(s,d));local=raw?JSON.parse(raw):null;}catch(e){}
       if(local){
+        // 개인 기록 클라우드 저장
         const ref=fb.doc(fb.db,'users',uid,'records',s+'_'+d);
         tasks.push(fb.setDoc(ref,{stage:s,diff:d,time:local.time,moves:local.moves,date:local.date},{merge:true}));
+        // 랭킹에도 제출 (기존 로컬 기록을 랭킹에 반영)
+        if(typeof submitRanking==='function')submitRanking(s,d,local.time,local.moves);
       }
     }
   }
