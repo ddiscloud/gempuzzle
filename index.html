@@ -1314,6 +1314,7 @@ function shuffleGems(){
 }
 
 function resetGame(){
+  _stageDone=false;   // 새 게임 시작 → 저장 재개 허용
   gems=shuffleGems();
   selected=null;selCluster=null;buf=[];moves=0;selBufIndices=[];
   bufSize=12;           // 시작 버퍼 12칸
@@ -1351,9 +1352,11 @@ function stopTimer(){
 
 // ===== 진행 상황 저장/복원 (localStorage) =====
 const SAVE_KEY='gempuzzle_progress_v1';
+let _stageDone=false;   // 현재 스테이지를 클리어했는지 (true면 저장 금지 — 완성 보드 부활 방지)
 // 실제 저장 (즉시)
 function saveProgressNow(){
   // 완료된 스테이지이거나 게임 중이 아니면 저장 안 함
+  if(_stageDone)return;                       // 클리어한 보드는 절대 저장 안 함
   if(typeof gems==='undefined'||!gems)return;
   try{
     const data={
@@ -1407,6 +1410,7 @@ function resumeProgress(){
   }
   currentStage=p.stage;
   currentDifficulty=p.difficulty;
+  _stageDone=false;   // 이어하기 시작 → 저장 재개 허용
   ANS=STAGE_LIST[currentStage].grid;
   applyStageSize(ANS);
   gems=p.gems;
@@ -2301,6 +2305,7 @@ function checkClear(){
   checkColorCompletion(ok);
   if(ok){
     const elapsed=stopTimer();
+    _stageDone=true;   // 이후 flush가 완성 보드를 저장하지 못하게
     stageCleared.add(currentStage);
     clearProgress();  // 클리어 시 이어하기 저장 삭제
     recordResult(currentStage, elapsed, moves);
