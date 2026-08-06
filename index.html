@@ -467,6 +467,38 @@
     padding: 20px;
   }
   #help-overlay.show { display: flex; }
+  /* 랭킹 모달 */
+  #ranking-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 600;
+    background: rgba(0,0,0,.8);
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  #ranking-overlay.show { display: flex; }
+  .ranking-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    width: 100%; max-width: 440px;
+    height: 70vh; max-height: 70vh;
+    display: flex; flex-direction: column;
+  }
+  .ranking-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-shrink: 0; }
+  .ranking-title { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent); }
+  .ranking-close { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; padding: 0; }
+  .ranking-close:hover { border-color: var(--accent); color: var(--accent); }
+  .ranking-tabs, .ranking-sort { display: flex; gap: 6px; margin-bottom: 8px; flex-shrink: 0; }
+  .ranking-list { flex: 1; overflow-y: auto; margin-top: 6px; }
+  .rank-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13px; }
+  .rank-row.me { background: rgba(0,180,216,.12); border-radius: 8px; }
+  .rank-num { width: 26px; text-align: center; font-family: 'Space Mono', monospace; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+  .rank-num.top { color: var(--accent); }
+  .rank-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rank-val { font-family: 'Space Mono', monospace; color: var(--text); flex-shrink: 0; }
+  .rank-val2 { font-family: 'Space Mono', monospace; color: var(--muted); font-size: 11px; flex-shrink: 0; min-width: 44px; text-align: right; }
+  .ranking-empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; line-height: 1.6; }
   .help-box {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -611,7 +643,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs }
+import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, orderBy, limit }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -631,7 +663,7 @@ const provider = new GoogleAuthProvider();
 // 게임 코드(비모듈 스크립트)에서 접근할 수 있도록 window에 노출
 window._fb = {
   auth, db, provider, signInWithPopup, signOut,
-  doc, getDoc, setDoc, collection, getDocs,
+  doc, getDoc, setDoc, collection, getDocs, query, where, orderBy, limit,
   currentUser: null
 };
 
@@ -713,10 +745,30 @@ onAuthStateChanged(auth, (user)=>{
       <div class="clear-stat"><div class="cs-label">이동</div><div class="cs-value" id="clear-moves">0회</div></div>
     </div>
     <div id="clear-best" style="font-size:13px;color:var(--muted);margin-bottom:16px;min-height:18px;"></div>
-    <div style="display:flex;gap:8px;justify-content:center;">
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+      <button class="ghost" onclick="openRanking(currentStage,currentDifficulty)">🏆 랭킹</button>
       <button class="ghost" onclick="document.getElementById('clear-overlay').classList.remove('show');openStageSelect()">스테이지 목록</button>
       <button class="primary" onclick="resetGame();document.getElementById('clear-overlay').classList.remove('show')">다시 도전</button>
     </div>
+  </div>
+</div>
+
+<div id="ranking-overlay">
+  <div class="ranking-box">
+    <div class="ranking-head">
+      <div class="ranking-title" id="rankingTitle">🏆 랭킹</div>
+      <button class="ranking-close" onclick="closeRanking()">✕</button>
+    </div>
+    <div class="ranking-tabs" id="rankingDiffTabs">
+      <button class="filter-btn small" data-rdiff="1">🟢 쉬움</button>
+      <button class="filter-btn small" data-rdiff="2">🟡 보통</button>
+      <button class="filter-btn small" data-rdiff="3">🔴 어려움</button>
+    </div>
+    <div class="ranking-sort" id="rankingSortTabs">
+      <button class="filter-btn small active" data-rsort="time">⏱ 시간순</button>
+      <button class="filter-btn small" data-rsort="moves">👣 이동순</button>
+    </div>
+    <div class="ranking-list" id="rankingList"></div>
   </div>
 </div>
 
@@ -3133,6 +3185,49 @@ function cloudSaveRecord(stage,diff,rec){
   }catch(e){/* 실패해도 로컬은 유지 */}
 }
 
+// ===== 랭킹 (rankings 컬렉션, 공유) =====
+// 문서 ID: {stage}_{diff}_{uid} → 한 사람이 스테이지×난이도별 기록 하나
+function submitRanking(stage,diff,time,moves){
+  const fb=window._fb; if(!fb||!fb.currentUser)return;
+  try{
+    const uid=fb.currentUser.uid;
+    const nick=(userNickname||fb.currentUser.displayName||'익명').slice(0,12);
+    const id=stage+'_'+diff+'_'+uid;
+    const ref=fb.doc(fb.db,'rankings',id);
+    // 기존 기록보다 좋을 때만 갱신하도록, 먼저 읽고 비교
+    fb.getDoc(ref).then(snap=>{
+      const prev=snap.exists()?snap.data():null;
+      if(!prev||time<prev.time){
+        fb.setDoc(ref,{uid,nickname:nick,stage,diff,time,moves,date:new Date().toISOString()});
+      }
+    }).catch(()=>{
+      // 읽기 실패 시 그냥 쓰기 시도
+      fb.setDoc(ref,{uid,nickname:nick,stage,diff,time,moves,date:new Date().toISOString()});
+    });
+  }catch(e){/* 랭킹 실패해도 게임엔 지장 없음 */}
+}
+
+// 특정 스테이지·난이도의 랭킹 조회 (sortBy: 'time' | 'moves')
+async function fetchRankings(stage,diff,sortBy){
+  const fb=window._fb;
+  if(!fb)return [];
+  try{
+    const col=fb.collection(fb.db,'rankings');
+    const q=fb.query(col,
+      fb.where('stage','==',stage),
+      fb.where('diff','==',diff),
+      fb.orderBy(sortBy==='moves'?'moves':'time','asc'),
+      fb.limit(20)
+    );
+    const snap=await fb.getDocs(q);
+    const out=[];
+    snap.forEach(d=>out.push(d.data()));
+    return out;
+  }catch(e){
+    return null; // 오류 (색인 필요 등)
+  }
+}
+
 // ===== 사용자 닉네임 =====
 let userNickname=null;
 function loadUser(){
@@ -3164,6 +3259,7 @@ function saveBestRecord(stage,diff,time,moves){
     localStorage.setItem(key,JSON.stringify(rec));
     _recCache[key]=rec;   // 캐시 갱신
     if(typeof cloudSaveRecord==='function')cloudSaveRecord(stage,diff,rec); // 클라우드에도 (로그인 시)
+    if(typeof submitRanking==='function')submitRanking(stage,diff,time,moves); // 랭킹 제출 (로그인 시)
     return true; // 신기록
   }
   return false;
@@ -3218,6 +3314,91 @@ document.getElementById('help-overlay').addEventListener('click', function(e){
 // ESC 키로 닫기
 document.addEventListener('keydown', function(e){
   if(e.key==='Escape') closeHelp();
+});
+
+// ===== 랭킹 모달 =====
+let _rankStage=0, _rankDiff=1, _rankSort='time';
+function openRanking(stage,diff){
+  _rankStage=stage;
+  _rankDiff=diff||1;
+  _rankSort='time';
+  // 난이도/정렬 탭 활성 상태 반영
+  document.querySelectorAll('#rankingDiffTabs .filter-btn').forEach(b=>{
+    b.classList.toggle('active',Number(b.dataset.rdiff)===_rankDiff);
+  });
+  document.querySelectorAll('#rankingSortTabs .filter-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.rsort==='time');
+  });
+  document.getElementById('rankingTitle').textContent='🏆 '+(STAGE_LIST[stage]?STAGE_LIST[stage].name:'랭킹');
+  document.getElementById('ranking-overlay').classList.add('show');
+  loadRankingList();
+}
+function closeRanking(){
+  document.getElementById('ranking-overlay').classList.remove('show');
+}
+async function loadRankingList(){
+  const listEl=document.getElementById('rankingList');
+  listEl.innerHTML='<div class="ranking-empty">불러오는 중…</div>';
+  // 로그인 안 했으면 안내
+  if(!window._fb){
+    listEl.innerHTML='<div class="ranking-empty">랭킹을 불러올 수 없어요.<br>잠시 후 다시 시도해주세요.</div>';
+    return;
+  }
+  const rows=await fetchRankings(_rankStage,_rankDiff,_rankSort);
+  if(rows===null){
+    listEl.innerHTML='<div class="ranking-empty">랭킹을 불러오지 못했어요.<br>Firestore 색인 설정이 필요할 수 있어요.<br>(콘솔의 안내 링크를 확인해주세요)</div>';
+    return;
+  }
+  if(rows.length===0){
+    listEl.innerHTML='<div class="ranking-empty">아직 기록이 없어요.<br>첫 기록의 주인공이 되어보세요! 🎉</div>';
+    return;
+  }
+  const myUid=window._fb.currentUser?window._fb.currentUser.uid:null;
+  listEl.innerHTML='';
+  rows.forEach((r,i)=>{
+    const row=document.createElement('div');
+    row.className='rank-row'+(r.uid===myUid?' me':'');
+    const rank=i+1;
+    const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':String(rank);
+    // 정렬 기준에 따라 주 값/보조 값 순서 바꿈
+    const timeStr=fmtTime(r.time);
+    const moveStr=r.moves+'회';
+    const primary=_rankSort==='moves'?moveStr:timeStr;
+    const secondary=_rankSort==='moves'?timeStr:moveStr;
+    row.innerHTML=
+      '<span class="rank-num'+(rank<=3?' top':'')+'">'+medal+'</span>'+
+      '<span class="rank-name"></span>'+
+      '<span class="rank-val"></span>'+
+      '<span class="rank-val2"></span>';
+    // 닉네임은 textContent로 안전하게 (XSS 방지)
+    row.querySelector('.rank-name').textContent=r.nickname||'익명';
+    row.querySelector('.rank-val').textContent=primary;
+    row.querySelector('.rank-val2').textContent=secondary;
+    listEl.appendChild(row);
+  });
+}
+// 난이도 탭
+document.querySelectorAll('#rankingDiffTabs .filter-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    _rankDiff=Number(btn.dataset.rdiff);
+    document.querySelectorAll('#rankingDiffTabs .filter-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    loadRankingList();
+  });
+});
+// 정렬 탭
+document.querySelectorAll('#rankingSortTabs .filter-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    _rankSort=btn.dataset.rsort;
+    document.querySelectorAll('#rankingSortTabs .filter-btn').forEach(b=>b.classList.toggle('active',b===btn));
+    loadRankingList();
+  });
+});
+// 배경 클릭·ESC로 닫기
+document.getElementById('ranking-overlay').addEventListener('click',function(e){
+  if(e.target===this)closeRanking();
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape')closeRanking();
 });
 
 // ===== 초기화: 메인 페이지에서 시작 =====
