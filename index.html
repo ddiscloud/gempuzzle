@@ -3224,6 +3224,8 @@ async function fetchRankings(stage,diff,sortBy){
     snap.forEach(d=>out.push(d.data()));
     return out;
   }catch(e){
+    console.error('랭킹 조회 오류:', e.code, e.message);
+    console.error(e);  // 색인 필요 시 여기에 생성 링크가 포함돼요
     return null; // 오류 (색인 필요 등)
   }
 }
