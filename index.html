@@ -1376,17 +1376,33 @@ function resetGame(){
   setStatus('칸을 클릭해 보석을 선택하세요',false);
   renderBuf();draw();
   if(typeof renderLegend==='function')renderLegend();
-  startTimer();
+  armTimer();   // 타이머 대기 (첫 이동 때 시작)
 }
 
 // ===== 클리어 타이머 =====
 let timerStart=0, timerId=null, timerElapsed=0;
+let _timerArmed=false;   // true면 '대기 중' — 첫 이동 때 실제 시작
 function fmtTime(ms){
   const s=Math.floor(ms/1000);
   const m=Math.floor(s/60);
   return m+':'+String(s%60).padStart(2,'0');
 }
+// 타이머 대기: 화면은 0:00으로, 아직 카운트는 안 함
+function armTimer(){
+  if(timerId){clearInterval(timerId);timerId=null;}
+  timerElapsed=0;
+  _timerArmed=true;
+  document.getElementById('tc').textContent='0:00';
+}
+// 첫 이동 시 호출 — 대기 상태면 실제로 타이머 시작
+function ensureTimerRunning(){
+  if(_timerArmed){
+    _timerArmed=false;
+    startTimer();
+  }
+}
 function startTimer(){
+  _timerArmed=false;
   timerStart=performance.now();
   timerElapsed=0;
   if(timerId)clearInterval(timerId);
@@ -1477,6 +1493,7 @@ function resumeProgress(){
   renderBuf();draw();
   if(typeof renderLegend==='function')renderLegend();
   // 타이머를 저장된 경과시간부터 이어서
+  _timerArmed=false;   // 이어하기는 즉시 진행 (대기 아님)
   timerStart=performance.now()-(p.elapsed||0);
   timerElapsed=p.elapsed||0;
   if(timerId)clearInterval(timerId);
@@ -2826,7 +2843,7 @@ function setStatus(t,active){
   }
   el.classList.toggle('active',!!active);
 }
-function upMoves(){document.getElementById('mc').textContent=moves;saveProgress();playMoveSound();}
+function upMoves(){ensureTimerRunning();document.getElementById('mc').textContent=moves;saveProgress();playMoveSound();}
 
 // legend (완성 상태 반영)
 function renderLegend(){
