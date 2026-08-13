@@ -8,18 +8,21 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:       #0a0e1a;
-    --surface:  #111827;
-    --surface2: #1a2235;
-    --border:   #2a3a55;
-    --text:     #e8edf5;
-    --muted:    #6b7fa0;
-    --accent:   #00B4D8;
-    --c1:  #FF4D6D;
-    --c3:  #FFB703;
-    --c12: #00B4D8;
-    --c13: #0077B6;
-    --c14: #03045E;
+    /* 살짝 어두운 무드 톤 — 눈이 편안한 차분한 중간 톤 (완전 다크 아님) */
+    --bg:       #2E2A32;   /* 따뜻한 차콜 (살짝 자주빛) */
+    --surface:  #3A353F;   /* 카드 — 무드 그레이 */
+    --surface2: #443E4A;   /* 살짝 밝은 표면 */
+    --border:   #524B58;   /* 부드러운 보더 */
+    --text:     #F0E9EC;   /* 밝은 오프화이트 — 본문 (대비 11.8) */
+    --muted:    #B5A8B2;   /* 연한 모브그레이 — 보조 (대비 6.2) */
+    --accent:   #E8899A;   /* 파스텔 로즈 — 장식·배경용 */
+    --accent-strong: #F4A9B8; /* 밝은 로즈 — 버튼·텍스트 강조 (어두운 배경 대비 7.5) */
+    --accent2:  #9DCEB8;   /* 파스텔 민트 (보조) */
+    --c1:  #FF8FA3;
+    --c3:  #FFD6A5;
+    --c12: #A3D8C6;
+    --c13: #9DD0E8;
+    --c14: #B8A9D9;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
@@ -66,7 +69,7 @@
     font-size: 22px;
     font-weight: 700;
     letter-spacing: -0.5px;
-    color: var(--accent);
+    color: var(--accent-strong);
   }
   .logo span { color: var(--text); }
   .logo-group { display: flex; flex-direction: column; gap: 2px; }
@@ -108,8 +111,8 @@
     width: 84px; height: 84px;
     border: 1px solid rgba(255,255,255,0.25);
     border-radius: 6px;
-    background: #E8DCC0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    background: #453F4C;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
     pointer-events: none;
     opacity: 0;
     transition: opacity .2s;
@@ -127,7 +130,7 @@
     background: rgba(6,11,20,0.82);
     border: 1px solid rgba(255,255,255,0.18);
     border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
     pointer-events: none;
     font-family: 'Space Mono', monospace;
     font-size: 13px;
@@ -140,7 +143,7 @@
   #hoverColor .hc-sw {
     width: 17px; height: 17px;
     border-radius: 4px;
-    border: 1px solid rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
     flex-shrink: 0;
   }
   #hoverColor .hc-lbl { font-size: 11px; color: rgba(255,255,255,0.75); font-weight: 700; }
@@ -158,7 +161,7 @@
     width: 34px; height: 34px;
     border-radius: 8px;
     border: 1px solid var(--border);
-    background: rgba(17,24,39,0.85);
+    background: rgba(58,53,63,0.9);
     color: var(--text);
     font-size: 18px;
     font-family: 'Space Mono', monospace;
@@ -167,19 +170,19 @@
     cursor: pointer;
     padding: 0;
   }
-  .zoom-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(17,24,39,0.95); }
+  .zoom-btn:hover { border-color: var(--accent); color: var(--accent-strong); background: rgba(68,62,74,0.98); }
 
   /* 음량 컨트롤 */
   .vol-control { position: relative; display: inline-block; }
   .vol-popover {
     display: none;
     position: absolute; top: 110%; right: 0; z-index: 50;
-    background: var(--surface, #131a2b);
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 10px 12px;
     align-items: center; gap: 8px;
-    box-shadow: 0 6px 20px rgba(0,0,0,.4);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.35);
   }
   .vol-popover.show { display: flex; }
   .vol-mute {
@@ -212,12 +215,12 @@
     aspect-ratio: 1 / 1;
     border-radius: 6px;
     border: 1.5px dashed var(--border);
-    background: #E8DCC0;
+    background: #453F4C;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
     transition: border-color .15s, box-shadow .15s, transform .15s;
   }
-  .bslot.filled { border-style: solid; border-color: var(--border); background: #E8DCC0; }
+  .bslot.filled { border-style: solid; border-color: var(--border); background: #453F4C; }
   .bslot.locked {
     background: rgba(255,255,255,0.03);
     border: 1.5px dashed rgba(255,255,255,0.12);
@@ -231,7 +234,7 @@
   }
   .bslot.sel-buf .gem-dot {
     transform: translateY(-5px) scale(1.06);
-    box-shadow: 0 2px 2px rgba(0,0,0,0.35);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   }
   .bslot:hover { border-color: var(--accent); }
   .bslot.just-unlocked {
@@ -269,14 +272,14 @@
     cursor: pointer;
     transition: background .15s, border-color .15s;
   }
-  button:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+  button:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent-strong); }
   button.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #000;
+    background: var(--accent-strong);
+    border-color: var(--accent-strong);
+    color: #2E2A32;
     font-weight: 700;
   }
-  button.primary:hover { background: #00caf0; border-color: #00caf0; color: #000; }
+  button.primary:hover { background: #F7BCC7; border-color: #F7BCC7; color: #2E2A32; }
 
   .status {
     margin-top: 14px;
@@ -296,9 +299,9 @@
   .status-swatch {
     width: 16px; height: 16px;
     border-radius: 4px;
-    border: 1px solid rgba(0,0,0,.2);
+    border: 1px solid var(--border);
     flex-shrink: 0;
-    box-shadow: 0 1px 2px rgba(0,0,0,.3);
+    box-shadow: 0 1px 3px rgba(150,110,130,0.15);
   }
   .status-color-name {
     font-weight: 700;
@@ -311,7 +314,7 @@
   #clear-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 100;
-    background: rgba(0,0,0,.75);
+    background: rgba(91,74,84,0.32);
     align-items: center; justify-content: center;
   }
   #clear-overlay.show { display: flex; }
@@ -372,7 +375,7 @@
   .main-art canvas {
     width: 100%; aspect-ratio: 1/1;
     border-radius: 10px;
-    background: #E8DCC0;
+    background: #453F4C;
     image-rendering: pixelated;
     border: 1px solid var(--border);
   }
@@ -382,7 +385,7 @@
   #nickname-popup {
     display: none;
     position: fixed; inset: 0; z-index: 400;
-    background: rgba(0,0,0,.7);
+    background: rgba(91,74,84,0.30);
     align-items: center; justify-content: center;
     padding: 20px;
   }
@@ -417,7 +420,7 @@
   #diff-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 250;
-    background: rgba(0,0,0,.8);
+    background: rgba(91,74,84,0.35);
     align-items: center; justify-content: center;
     padding: 20px;
   }
@@ -462,7 +465,7 @@
   #help-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 500;
-    background: rgba(0,0,0,.8);
+    background: rgba(91,74,84,0.35);
     align-items: center; justify-content: center;
     padding: 20px;
   }
@@ -471,7 +474,7 @@
   #ranking-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 600;
-    background: rgba(0,0,0,.8);
+    background: rgba(91,74,84,0.35);
     align-items: center; justify-content: center;
     padding: 20px;
   }
@@ -486,7 +489,7 @@
     display: flex; flex-direction: column;
   }
   .ranking-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-shrink: 0; }
-  .ranking-title { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent); }
+  .ranking-title { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent-strong); }
   .ranking-close { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; padding: 0; }
   .ranking-close:hover { border-color: var(--accent); color: var(--accent); }
   .ranking-tabs, .ranking-sort { display: flex; gap: 6px; margin-bottom: 8px; flex-shrink: 0; }
@@ -494,7 +497,7 @@
   .rank-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13px; }
   .rank-row.me { background: rgba(0,180,216,.12); border-radius: 8px; }
   .rank-num { width: 26px; text-align: center; font-family: 'Space Mono', monospace; font-weight: 700; color: var(--muted); flex-shrink: 0; }
-  .rank-num.top { color: var(--accent); }
+  .rank-num.top { color: var(--accent-strong); }
   .rank-name { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .rank-val { font-family: 'Space Mono', monospace; color: var(--text); flex-shrink: 0; }
   .rank-val2 { font-family: 'Space Mono', monospace; color: var(--muted); font-size: 11px; flex-shrink: 0; min-width: 44px; text-align: right; }
@@ -591,7 +594,7 @@
   #stage-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,.8);
+    background: rgba(91,74,84,0.35);
     align-items: center; justify-content: center;
     padding: 20px;
   }
@@ -619,7 +622,7 @@
   }
   .stage-card:hover { border-color: var(--accent); transform: translateY(-2px); }
   .stage-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-  .stage-card canvas { width: 96px; height: 96px; border-radius: 8px; background: #E8DCC0; image-rendering: pixelated; }
+  .stage-card canvas { width: 96px; height: 96px; border-radius: 8px; background: #453F4C; image-rendering: pixelated; }
   .stage-card .nm { font-size: 13px; color: var(--text); }
   .stage-card .done-badge { font-size: 11px; color: #38B000; }
   .stage-rank-btn {
@@ -638,7 +641,7 @@
   }
   .filter-btn.small { font-size: 12px; padding: 4px 12px; }
   .filter-btn:hover { border-color: var(--accent); color: var(--text); }
-  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #0b0f1a; font-weight: 700; }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #2E2A32; font-weight: 700; }
   .filter-count { font-size: 12px; color: var(--muted); margin-left: auto; }
   .stage-empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px 0; font-size: 14px; }
   .diff-badges { display: flex; gap: 6px; margin-top: 2px; }
@@ -752,7 +755,7 @@ onAuthStateChanged(auth, (user)=>{
       <div class="clear-stat"><div class="cs-label">이동</div><div class="cs-value" id="clear-moves">0회</div></div>
     </div>
     <div id="clear-best" style="font-size:13px;color:var(--muted);margin-bottom:8px;min-height:18px;"></div>
-    <div id="clear-rank" style="font-size:14px;color:var(--accent);margin-bottom:16px;min-height:18px;font-weight:700;"></div>
+    <div id="clear-rank" style="font-size:14px;color:var(--accent-strong);margin-bottom:16px;min-height:18px;font-weight:700;"></div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
       <button class="ghost" onclick="openRanking(currentStage,currentDifficulty)">🏆 랭킹</button>
       <button class="ghost" onclick="document.getElementById('clear-overlay').classList.remove('show');openStageSelect()">스테이지 목록</button>
@@ -958,6 +961,11 @@ const CNAME={1:'밝은빨강',2:'빨강',3:'진빨강',4:'귤색',5:'주황',6:'
 
 // STAGE_LIST is loaded from stages.js
 // 현재 스테이지의 정답판 (선택 시 설정됨)
+// ===== 데이터 버전 (시즌 리셋용) =====
+// 이 값을 올리면 기존 로컬 기록·진행·랭킹과 키가 달라져 완전 초기화됨.
+// (기존 로컬 데이터가 로그인 시 되살아나는 것도 차단)
+const DATA_VERSION='v2';
+
 let currentStage=0;
 let currentDifficulty=1; // 1=쉬움, 2=보통, 3=어려움
 let ANS=STAGE_LIST[0].grid;
@@ -1061,6 +1069,15 @@ function buildRegions(){
 
 // Step 4: 색을 적당한 크기의 blob들로 쪼갬
 function splitColorsIntoBlobs(colorCounts){
+  // 난이도별 blob 크기 범위: 쉬울수록 큰 덩어리, 어려울수록 작은 덩어리
+  // (낱알로 부서지지 않게 최소 크기를 유지)
+  const sizeRange={
+    1:[12,20],  // 🟢 쉬움: 큰 덩어리
+    2:[7,13],   // 🟡 보통: 중간 덩어리
+    3:[4,8],    // 🔴 어려움: 작은 덩어리 (그래도 4칸 이상 → 낱알 방지)
+  };
+  const [minSize,maxSize]=sizeRange[currentDifficulty]||sizeRange[2];
+  const span=maxSize-minSize+1;
   // 색별 blob 목록 생성
   const byColor={};
   for(const colorStr in colorCounts){
@@ -1069,8 +1086,8 @@ function splitColorsIntoBlobs(colorCounts){
     byColor[color]=[];
     while(remain>0){
       let size;
-      if(remain<=8){size=remain;}
-      else{size=Math.min(remain,8+Math.floor(rng()*9));} // 8~16
+      if(remain<=minSize){size=remain;}
+      else{size=Math.min(remain,minSize+Math.floor(rng()*span));}
       byColor[color].push({color,size});
       remain-=size;
     }
@@ -1186,12 +1203,15 @@ function repairCounts(play,colorCounts){
 // Step 9: 정답 일치 셀 줄이기 (local swap)
 function reduceMatched(play){
   const keys=Object.keys(play);
-  const matched=()=>keys.filter(k=>{const[r,c]=k.split('_').map(Number);return play[k]===ANS[r][c];});
+  const isMatch=(k)=>{const[r,c]=k.split('_').map(Number);return play[k]===ANS[r][c];};
+  const matched=()=>keys.filter(isMatch);
   let m=matched();
   let pass=0;
-  while(m.length>0&&pass<6){
+  // 패스를 넉넉히 (정답 일치를 최대한 0으로)
+  while(m.length>0&&pass<20){
     let improved=false;
     for(const ka of m){
+      if(!isMatch(ka))continue; // 앞선 swap으로 이미 해소됐으면 건너뜀
       const [ra,ca]=ka.split('_').map(Number);
       const colA=play[ka];
       // colA를 받아도 정답이 안 되는 셀 B 찾기 (그리고 B의 색이 A에 와도 정답 아님)
@@ -1211,6 +1231,28 @@ function reduceMatched(play){
     }
     m=matched();pass++;
     if(!improved)break;
+  }
+  // 그래도 남은 정답 일치 셀: 색이 다른 아무 셀과라도 교환해 정답을 깸
+  // (상대가 정답이 되더라도, 전체 정답 수가 늘지 않는 경우만)
+  m=matched();
+  for(const ka of m){
+    if(!isMatch(ka))continue;
+    const [ra,ca]=ka.split('_').map(Number);
+    const colA=play[ka];
+    for(const kb of keys){
+      if(kb===ka)continue;
+      const [rb,cb]=kb.split('_').map(Number);
+      const colB=play[kb];
+      if(colA===colB)continue;
+      // swap 전 정답 수(이 두 칸): A는 정답(1), B는 ?
+      const beforeMatch=(isMatch(ka)?1:0)+(isMatch(kb)?1:0);
+      const afterMatch=(colB===ANS[ra][ca]?1:0)+(colA===ANS[rb][cb]?1:0);
+      // 정답 수가 줄어드는 교환만 (A의 정답을 깨는 방향)
+      if(afterMatch<beforeMatch){
+        play[ka]=colB;play[kb]=colA;
+        break;
+      }
+    }
   }
 }
 
@@ -1264,8 +1306,12 @@ function generatePlayBoard(){
   // 영역을 큰 것부터 처리 (큰 영역에 단일 색을 우선 배정)
   const ordered=regions.slice().sort((a,b)=>b.cells.length-a.cells.length);
 
+  // 난이도별 '한 색으로 이어 채우는 최대 덩어리 크기' — 낮을수록 잘게 나뉨(어려움)
+  const maxChunkByDiff={1:9999, 2:12, 3:6};  // 쉬움=제한없음(큰덩어리), 어려움=작게
+  const maxChunk=maxChunkByDiff[currentDifficulty]||maxChunkByDiff[2];
+
   // 각 영역을 채우기: "그 영역의 정답 색이 아니면서 재고가 가장 많은 색"을 골라
-  // 영역 셀을 가능한 만큼 그 색으로 채움. 모자라면 다음으로 재고 많은 색으로 이어 채움.
+  // 영역 셀을 가능한 만큼 그 색으로 채움. 난이도에 따라 한 번에 채우는 크기를 제한.
   for(const region of ordered){
     const ansColor=region.color;
     // 영역 셀을 BFS 순서(인접 우선)로 정렬 → 같은 색이 영역 안에서 뭉쳐 들어감
@@ -1284,8 +1330,8 @@ function generatePlayBoard(){
         for(const colStr in stock){const col=Number(colStr);if(stock[col]>0){pick=col;break;}}
         if(pick<0)break;
       }
-      // 이 색으로 채울 수 있는 만큼 (영역 남은 칸 vs 재고)
-      const fillN=Math.min(cells.length-idx, stock[pick]);
+      // 이 색으로 채울 수 있는 만큼 (영역 남은 칸 vs 재고 vs 난이도별 최대 덩어리)
+      const fillN=Math.min(cells.length-idx, stock[pick], maxChunk);
       for(let i=0;i<fillN;i++){
         const {r,c}=cells[idx++];
         play[r+'_'+c]=pick;
@@ -1298,30 +1344,76 @@ function generatePlayBoard(){
   repairCounts(play,colorCounts);
   // 난이도에 따라 색을 흩뿌림 (1=뭉침 유지, 높을수록 흩어짐)
   scatterByDifficulty(play);
-  // 정답 위치에 우연히 맞은 칸을 줄임
-  reduceMatched(play);
+  // 색 개수 먼저 맞춘 뒤 (repairCounts가 정답을 만들 수 있으므로)
   repairCounts(play,colorCounts);
+  // 정답 위치에 우연히 맞은 칸을 마지막에 제거 (이후 색 개수를 바꾸지 않는 swap만 사용)
+  reduceMatched(play);
 
   return play;
 }
 
-// 난이도별 흩뿌리기: 보석 쌍을 무작위로 swap해서 같은 색 덩어리를 흩어지게 함
-// 난이도 1=흩뿌림 없음, 2=중간, 3=많이. swap이라 색 개수는 보존됨.
+// 난이도별 흩뿌리기: 낱알 swap 대신 '덩어리째 위치 교환'으로 자연스럽게 섞음
+// blob 크기는 이미 난이도로 조절되므로, 여기서는 덩어리 단위로 위치만 뒤섞는다.
 function scatterByDifficulty(play){
-  const ratioMap={1:0, 2:0.18, 3:0.45}; // 활성 칸 대비 swap 횟수 비율
-  const ratio=ratioMap[currentDifficulty]||0;
+  // 난이도별 '위치를 뒤섞을 덩어리 쌍' 개수 비율
+  const swapMap={1:0, 2:0.15, 3:0.30};
+  const ratio=swapMap[currentDifficulty]||0;
   if(ratio<=0)return;
+
+  // 현재 play를 같은 색 연결 덩어리들로 분해 (8방향)
+  const visited={};
+  const clusters=[];
   const keys=Object.keys(play);
-  const swaps=Math.floor(keys.length*ratio);
-  for(let i=0;i<swaps;i++){
-    const a=keys[Math.floor(rng()*keys.length)];
-    const b=keys[Math.floor(rng()*keys.length)];
-    if(a===b)continue;
-    // 정답 위치를 새로 만들지 않는 swap만 (너무 쉬워지는 것 방지)
-    const [ar,ac]=a.split('_').map(Number);
-    const [br,bc]=b.split('_').map(Number);
-    if(play[b]===ANS[ar][ac]||play[a]===ANS[br][bc])continue;
-    const t=play[a];play[a]=play[b];play[b]=t;
+  for(const k of keys){
+    if(visited[k])continue;
+    const color=play[k];
+    const cells=[];
+    const q=[k]; visited[k]=true;
+    while(q.length){
+      const cur=q.shift();
+      cells.push(cur);
+      const [r,c]=cur.split('_').map(Number);
+      for(const [dr,dc] of DIRS8){
+        const nk=(r+dr)+'_'+(c+dc);
+        if(play[nk]!==undefined && !visited[nk] && play[nk]===color){
+          visited[nk]=true; q.push(nk);
+        }
+      }
+    }
+    clusters.push({color,cells});
+  }
+
+  // 덩어리째 위치 교환: 색이 다르고 크기가 같은 두 덩어리의 셀 색을 통째로 맞바꿈
+  // (크기가 같아야 색 개수가 보존됨)
+  const bySize={};
+  clusters.forEach((cl,idx)=>{
+    const s=cl.cells.length;
+    (bySize[s]=bySize[s]||[]).push(idx);
+  });
+  const pairs=Math.floor(clusters.length*ratio);
+  let done=0, tries=0;
+  while(done<pairs && tries<pairs*10){
+    tries++;
+    // 같은 크기 그룹에서 색이 다른 두 덩어리 선택
+    const sizes=Object.keys(bySize).filter(s=>bySize[s].length>=2);
+    if(sizes.length===0)break;
+    const s=sizes[Math.floor(rng()*sizes.length)];
+    const group=bySize[s];
+    const i=group[Math.floor(rng()*group.length)];
+    const j=group[Math.floor(rng()*group.length)];
+    if(i===j)continue;
+    const A=clusters[i], B=clusters[j];
+    if(A.color===B.color)continue;
+    // 교환 시 정답 위치가 새로 많이 생기지 않는지 가볍게 확인
+    let newMatch=0;
+    for(const k of A.cells){const [r,c]=k.split('_').map(Number);if(B.color===ANS[r][c])newMatch++;}
+    for(const k of B.cells){const [r,c]=k.split('_').map(Number);if(A.color===ANS[r][c])newMatch++;}
+    if(newMatch> s*0.5)continue; // 절반 넘게 정답이 되면 건너뜀
+    // 색 맞바꿈
+    for(const k of A.cells)play[k]=B.color;
+    for(const k of B.cells)play[k]=A.color;
+    const tc=A.color; A.color=B.color; B.color=tc;
+    done++;
   }
 }
 
@@ -1363,12 +1455,12 @@ function shuffleGems(){
   seedRng(1000+currentStage*7919+currentDifficulty*104729);
   let best=null,bestMatched=Infinity;
   const active=activeCells();
-  for(let attempt=0;attempt<5;attempt++){
+  for(let attempt=0;attempt<8;attempt++){
     const play=generatePlayBoard();
     let matched=0;
     active.forEach(({r,c})=>{if(play[r+'_'+c]===ANS[r][c])matched++;});
     if(matched<bestMatched){bestMatched=matched;best=play;}
-    if(matched<=active.length*0.05)break; // 5% 이하면 충분
+    if(matched===0)break; // 정답 일치 0이면 완벽 → 즉시 채택
   }
   return best;
 }
@@ -1427,7 +1519,7 @@ function stopTimer(){
 }
 
 // ===== 진행 상황 저장/복원 (localStorage) =====
-const SAVE_KEY='gempuzzle_progress_v1';
+const SAVE_KEY='gempuzzle_progress_'+DATA_VERSION;
 let _stageDone=false;   // 현재 스테이지를 클리어했는지 (true면 저장 금지 — 완성 보드 부활 방지)
 // 실제 저장 (즉시)
 function saveProgressNow(){
@@ -1767,7 +1859,7 @@ function draw(){
   // 줌/팬 변환 적용
   ctx.setTransform(view.scale,0,0,view.scale,view.x,view.y);
   // 배경: 전체를 베이지로 (캔버스 전체 + 여유)
-  ctx.fillStyle='#E8DCC0';
+  ctx.fillStyle='#453F4C';
   ctx.fillRect(-CV_SIZE,-CV_SIZE,CV_SIZE*3,CV_SIZE*3);
   const clusterKeys=new Set((selCluster||[]).map(({r,c})=>r+'_'+c));
   // 애니메이션 도착 예정 칸: 도착 전까지 빈 홈으로 표시
@@ -2145,10 +2237,10 @@ function drawMinimap(){
   if(view.scale<=1.01)return;
   const W=mm.width,H=mm.height;
   mmCtx.clearRect(0,0,W,H);
-  mmCtx.fillStyle='#E8DCC0';mmCtx.fillRect(0,0,W,H);
+  mmCtx.fillStyle='#453F4C';mmCtx.fillRect(0,0,W,H);
   const sc=W/CV_SIZE;
   // 그림 영역 배경
-  mmCtx.fillStyle='#E8DCC0';
+  mmCtx.fillStyle='#453F4C';
   mmCtx.fillRect((GRID_OFFSET+OFF_X)*sc,(GRID_OFFSET+OFF_Y)*sc,COLS*SZ*sc,ROWS*SZ*sc);
   // 활성 칸
   for(let r=0;r<ROWS;r++)for(let c=0;c<COLS;c++){
@@ -2428,7 +2520,7 @@ async function showMyRank(stage,diff){
     if(idx<0){el.textContent='';return;}
     const rank=idx+1;
     const medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
-    el.style.color='var(--accent)';
+    el.style.color='var(--accent-strong)';
     el.textContent=medal+' 현재 '+rank+'위'+(rows.length>=20?' (상위 20위 중)':' / '+rows.length+'명 중');
   },900);
 }
@@ -2909,7 +3001,7 @@ function drawStageThumb(canvas,grid){
   const c=canvas.getContext('2d');
   const rows=grid.length, cols=grid[0].length;
   const s=canvas.width/cols;
-  c.fillStyle='#E8DCC0';c.fillRect(0,0,canvas.width,canvas.height);
+  c.fillStyle='#453F4C';c.fillRect(0,0,canvas.width,canvas.height);
   for(let r=0;r<rows;r++)for(let col=0;col<cols;col++){
     const v=grid[r][col];if(!v)continue;
     c.fillStyle=PAL[v];
@@ -3189,7 +3281,7 @@ async function syncFromCloud(){
   try{
     const uid=fb.currentUser.uid;
     // 1) 기록 동기화: 클라우드 records를 읽어 로컬보다 좋은 기록이면 반영
-    const recCol=fb.collection(fb.db,'users',uid,'records');
+    const recCol=fb.collection(fb.db,'users',uid,'records_'+DATA_VERSION);
     const snap=await fb.getDocs(recCol);
     let pulled=0;
     snap.forEach(d=>{
@@ -3230,7 +3322,7 @@ async function pushLocalRecordsToCloud(){
       try{const raw=localStorage.getItem(recStorageKey(s,d));local=raw?JSON.parse(raw):null;}catch(e){}
       if(local){
         // 개인 기록 클라우드 저장
-        const ref=fb.doc(fb.db,'users',uid,'records',s+'_'+d);
+        const ref=fb.doc(fb.db,'users',uid,'records_'+DATA_VERSION,s+'_'+d);
         tasks.push(fb.setDoc(ref,{stage:s,diff:d,time:local.time,moves:local.moves,date:local.date},{merge:true}));
         // 랭킹에도 제출 (기존 로컬 기록을 랭킹에 반영)
         if(typeof submitRanking==='function')submitRanking(s,d,local.time,local.moves);
@@ -3244,7 +3336,7 @@ async function pushLocalRecordsToCloud(){
 function cloudSaveRecord(stage,diff,rec){
   const fb=window._fb; if(!fb||!fb.currentUser)return;
   try{
-    const ref=fb.doc(fb.db,'users',fb.currentUser.uid,'records',stage+'_'+diff);
+    const ref=fb.doc(fb.db,'users',fb.currentUser.uid,'records_'+DATA_VERSION,stage+'_'+diff);
     fb.setDoc(ref,{stage,diff,time:rec.time,moves:rec.moves,date:rec.date},{merge:true});
   }catch(e){/* 실패해도 로컬은 유지 */}
 }
@@ -3260,7 +3352,7 @@ function submitRanking(stage,diff,time,moves){
       ? userNickname.trim().slice(0,12)
       : ('#'+uid.slice(0,5));
     const id=stage+'_'+diff+'_'+uid;
-    const ref=fb.doc(fb.db,'rankings',id);
+    const ref=fb.doc(fb.db,'rankings_'+DATA_VERSION,id);
     // 기존 기록보다 좋을 때만 갱신하도록, 먼저 읽고 비교
     fb.getDoc(ref).then(snap=>{
       const prev=snap.exists()?snap.data():null;
@@ -3279,7 +3371,7 @@ async function fetchRankings(stage,diff,sortBy){
   const fb=window._fb;
   if(!fb)return [];
   try{
-    const col=fb.collection(fb.db,'rankings');
+    const col=fb.collection(fb.db,'rankings_'+DATA_VERSION);
     const q=fb.query(col,
       fb.where('stage','==',stage),
       fb.where('diff','==',diff),
@@ -3315,7 +3407,7 @@ function updateNicknameDisplay(){
 
 // ===== 기록 (localStorage) =====
 // key: "gem_rec_{stage}_{diff}" → {time, moves, date}
-function recStorageKey(stage,diff){return 'gem_rec_'+stage+'_'+diff;}
+function recStorageKey(stage,diff){return 'gem_rec_'+DATA_VERSION+'_'+stage+'_'+diff;}
 // 메모리 캐시: 목록 렌더 시 189회 localStorage 읽기 → 캐시 히트로 대체
 const _recCache={};   // key → record | null (null=없음 확정)
 window._recCache=_recCache;   // 클라우드 동기화에서 접근
