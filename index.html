@@ -569,6 +569,15 @@
   }
   .ed-swatch:hover { transform: scale(1.1); }
   .ed-swatch.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent-strong); }
+  .ed-swatch-erase {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--muted);
+    background:
+      linear-gradient(45deg, var(--surface2) 25%, transparent 25%, transparent 75%, var(--surface2) 75%),
+      linear-gradient(45deg, var(--surface2) 25%, var(--border) 25%, var(--border) 75%, var(--surface2) 75%);
+    background-size: 10px 10px; background-position: 0 0, 5px 5px;
+    border: 2px solid var(--border);
+  }
   .editor-status { font-size: 13px; color: var(--muted); min-height: 18px; text-align: center; }
   .editor-live { font-size: 12px; text-align: center; padding: 6px 10px; border-radius: 8px; background: var(--surface2); color: var(--muted); }
   .editor-live.ok { color: #9DCEB8; }
@@ -4272,6 +4281,19 @@ function edStatus(msg){
 function edBuildPalette(){
   const wrap=document.getElementById('edPalette');
   wrap.innerHTML='';
+  // 맨 앞: 지우기(빈칸) 칸 — 채우기와 조합하면 연결 영역을 통째로 지움
+  const eraser=document.createElement('div');
+  eraser.className='ed-swatch ed-swatch-erase'+(edColor===0?' active':'');
+  eraser.title='지우기 (빈칸)';
+  eraser.textContent='⌫';
+  eraser.addEventListener('click',()=>{
+    edColor=0;
+    if(edTool==='erase')edTool='paint';  // 채우기 상태면 유지
+    document.querySelectorAll('.ed-swatch').forEach(s=>s.classList.remove('active'));
+    eraser.classList.add('active');
+    edSyncToolButtons();
+  });
+  wrap.appendChild(eraser);
   for(let id=1;id<=27;id++){
     const sw=document.createElement('div');
     sw.className='ed-swatch'+(id===edColor?' active':'');
@@ -4359,7 +4381,8 @@ function edPaintAt(clientX,clientY){
     const v=edGrid[cell.r][cell.c];
     if(v!==0){
       edColor=v;
-      document.querySelectorAll('.ed-swatch').forEach((s,i)=>s.classList.toggle('active',i+1===v));
+      // 팔레트: [0]=지우기칸, [1..27]=색 → 색 v는 인덱스 v
+      document.querySelectorAll('.ed-swatch').forEach((s,i)=>s.classList.toggle('active',i===v));
       edSetTool('paint'); // 색 뽑고 바로 그리기로
       edStatus('색 '+v+' 선택됨 — 그리기로 전환');
     }
