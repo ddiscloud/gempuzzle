@@ -767,7 +767,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, where, orderBy, limit }
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where, orderBy, limit }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -787,7 +787,7 @@ const provider = new GoogleAuthProvider();
 // 게임 코드(비모듈 스크립트)에서 접근할 수 있도록 window에 노출
 window._fb = {
   auth, db, provider, signInWithPopup, signOut,
-  doc, getDoc, setDoc, collection, getDocs, query, where, orderBy, limit,
+  doc, getDoc, setDoc, deleteDoc, collection, getDocs, query, where, orderBy, limit,
   currentUser: null
 };
 
@@ -883,6 +883,10 @@ onAuthStateChanged(auth, (user)=>{
     <div class="admin-head">
       <div class="admin-title">📋 제출 관리 (운영자)</div>
       <button class="ghost" onclick="closeAdmin()">← 메인</button>
+    </div>
+    <div class="filter-row" id="adminTabs">
+      <button class="filter-btn active" data-atab="pending" onclick="switchAdminTab('pending')">⏳ 대기 중</button>
+      <button class="filter-btn" data-atab="published" onclick="switchAdminTab('published')">✅ 게시됨</button>
     </div>
     <div class="admin-sub" id="adminSub">대기 중인 제출을 확인하세요</div>
     <div class="admin-list" id="adminList"></div>
@@ -3907,15 +3911,88 @@ document.addEventListener('keydown', function(e){
 let _adSubmissions=[];   // 불러온 제출 목록
 let _adCurrent=null;     // 현재 상세 보는 제출
 
+let _adminTab='pending';   // 'pending' | 'published'
 function openAdmin(){
   if(!isAdmin()){alert('운영자 전용 기능이에요');return;}
   document.getElementById('main-overlay').classList.remove('show');
   document.getElementById('admin-overlay').classList.add('show');
-  loadSubmissions();
+  switchAdminTab('pending');
+}
+function switchAdminTab(tab){
+  _adminTab=tab;
+  document.querySelectorAll('#adminTabs .filter-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.atab===tab);
+  });
+  if(tab==='pending')loadSubmissions();
+  else loadPublished();
 }
 function closeAdmin(){
   document.getElementById('admin-overlay').classList.remove('show');
   goMain();
+}
+// 게시된 스테이지 목록 불러오기
+async function loadPublished(){
+  const listEl=document.getElementById('adminList');
+  const sub=document.getElementById('adminSub');
+  listEl.innerHTML='<div class="admin-empty">불러오는 중…</div>';
+  const fb=window._fb;
+  if(!fb||!fb.currentUser){listEl.innerHTML='<div class="admin-empty">로그인이 필요해요</div>';return;}
+  try{
+    const col=fb.collection(fb.db,'published_stages');
+    const snap=await fb.getDocs(col);
+    const arr=[];
+    snap.forEach(d=>{
+      const data=d.data();
+      let grid=data.grid;
+      if(typeof grid==='string'){try{grid=JSON.parse(grid);}catch(e){return;}}
+      arr.push({id:d.id, name:data.name||'무제', nickname:data.nickname||'익명',
+                size:data.size||(grid?grid.length:0), grid});
+    });
+    arr.sort((a,b)=>(a.id<b.id?-1:1));
+    renderPublishedList(arr);
+    sub.textContent='게시된 스테이지 '+arr.length+'개';
+  }catch(e){
+    listEl.innerHTML='<div class="admin-empty">불러오지 못했어요<br>'+(e.code||'')+'</div>';
+  }
+}
+function renderPublishedList(arr){
+  const listEl=document.getElementById('adminList');
+  listEl.innerHTML='';
+  if(arr.length===0){
+    listEl.innerHTML='<div class="admin-empty">게시된 스테이지가 없어요</div>';
+    return;
+  }
+  arr.forEach(s=>{
+    const item=document.createElement('div');item.className='admin-item';
+    const cv=document.createElement('canvas');cv.width=56;cv.height=56;
+    drawStageThumb(cv,s.grid);
+    const info=document.createElement('div');info.className='admin-item-info';
+    const nm=document.createElement('div');nm.className='admin-item-name';nm.textContent=s.name;
+    const meta=document.createElement('div');meta.className='admin-item-meta';
+    meta.textContent='by '+s.nickname+' · '+s.size+'×'+s.size;
+    info.appendChild(nm);info.appendChild(meta);
+    // 내리기 버튼
+    const delBtn=document.createElement('button');
+    delBtn.className='ghost ad-reject';delBtn.style.flexShrink='0';
+    delBtn.textContent='내리기';
+    delBtn.addEventListener('click',(e)=>{e.stopPropagation();adUnpublish(s);});
+    item.appendChild(cv);item.appendChild(info);item.appendChild(delBtn);
+    listEl.appendChild(item);
+  });
+}
+// 게시 취소 (완전 삭제)
+async function adUnpublish(s){
+  const fb=window._fb;
+  if(!fb||!fb.currentUser||!isAdmin()){alert('권한이 없어요');return;}
+  if(!confirm('"'+s.name+'"을(를) 내릴까요?\n유저 제작 탭에서 제거돼요. (되돌릴 수 없음)'))return;
+  try{
+    await fb.deleteDoc(fb.doc(fb.db,'published_stages',s.id));
+    alert('내렸어요. 유저 제작 탭에서 제거됐어요.');
+    ugcLoaded=false; // UGC 목록 새로고침 유도
+    loadPublished();
+  }catch(e){
+    alert('내리기 실패: '+(e.code||e.message||'권한 확인 필요'));
+  }
 }
 // 제출 목록 불러오기 (status: pending)
 async function loadSubmissions(){
