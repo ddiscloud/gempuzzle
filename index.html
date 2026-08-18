@@ -2306,8 +2306,18 @@ function handleGrid(r,c){
         setStatus(`버퍼에서 ${placeCount}개 배치됨`,true);
       }
     } else {
-      // 보석이 이미 있는 칸 → 놓을 수 없으므로 선택 해제
-      selected=null;selBufIndices=[];renderBuf();draw();setStatus('빈 칸에만 놓을 수 있어요 — 선택 해제',false);
+      // 보석이 이미 있는 칸 → 선택 가능한 보석이면 그 보석을 새로 선택 (버퍼 선택 해제)
+      if(canSelect(r,c,gems)){
+        const cluster=getCluster(r,c,gems);
+        selected={type:'grid',r,c};
+        selCluster=cluster;
+        selBufIndices=[];
+        renderBuf();draw();
+        setStatus(cluster.length>1?`같은 색 ${cluster.length}개 덩어리 선택됨`:'보석 1개 선택됨',true);
+      } else {
+        // 정답이거나 선택 불가 → 선택 해제
+        selected=null;selBufIndices=[];renderBuf();draw();setStatus('빈 칸에만 놓을 수 있어요 — 선택 해제',false);
+      }
     }
     return;
   }
@@ -2316,6 +2326,18 @@ function handleGrid(r,c){
     const clusterKeys=new Set(selCluster.map(({r,c})=>r+'_'+c));
     // Fix 4: clicking inside cluster → deselect
     if(clusterKeys.has(k)){selected=null;selCluster=null;draw();setStatus('선택 해제',false);return;}
+
+    // 개선: 든 상태에서 '다른 선택 가능한 보석'을 클릭하면 바로 그 보석을 새로 선택
+    // (빈 칸이 아니라 보석이 있는 칸 → 이동 목적지가 아니므로 재선택으로 처리)
+    if(canSelect(r,c,gems)){
+      const cluster=getCluster(r,c,gems);
+      selected={type:'grid',r,c};
+      selCluster=cluster;
+      selBufIndices=[];
+      draw();
+      setStatus(cluster.length>1?`같은 색 ${cluster.length}개 덩어리 선택됨`:'보석 1개 선택됨',true);
+      return;
+    }
 
     const destAns=ANS[r][c];
     if(destAns===0){selected=null;selCluster=null;draw();return;}
@@ -3264,6 +3286,7 @@ window.onAuthChanged=function(user){
     if(userPhoto&&user.photoURL){userPhoto.src=user.photoURL;userPhoto.style.display='';}
     // (구글 이름을 닉네임으로 자동 설정하지 않음 — 사용자가 직접 설정)
     // 클라우드 데이터와 동기화
+    cloudLoadNickname();   // 계정에 저장된 닉네임 불러오기 (다른 기기에서도 따라옴)
     syncFromCloud();
   }else{
     // 로그아웃 상태
@@ -3397,8 +3420,41 @@ function loadUser(){
 }
 function saveUser(nick){
   userNickname=nick;
-  setCookie('gem_nickname',nick,365); // 1년 유지
+  setCookie('gem_nickname',nick,365); // 1년 유지 (로컬)
+  cloudSaveNickname(nick);            // 로그인 상태면 계정에도 저장
   updateNicknameDisplay();
+}
+// 닉네임을 계정(Firestore users/{uid})에 저장
+function cloudSaveNickname(nick){
+  const fb=window._fb;
+  if(!fb||!fb.currentUser||!nick)return;
+  try{
+    const ref=fb.doc(fb.db,'users',fb.currentUser.uid);
+    fb.setDoc(ref,{nickname:nick},{merge:true});
+  }catch(e){/* 실패해도 로컬은 유지 */}
+}
+// 로그인 시 계정에서 닉네임 불러오기 (다른 기기에서도 따라오도록)
+async function cloudLoadNickname(){
+  const fb=window._fb;
+  if(!fb||!fb.currentUser)return;
+  try{
+    const ref=fb.doc(fb.db,'users',fb.currentUser.uid);
+    const snap=await fb.getDoc(ref);
+    if(snap.exists()){
+      const data=snap.data();
+      if(data && data.nickname){
+        // 계정 닉네임을 우선 적용 (로컬에도 반영)
+        userNickname=data.nickname;
+        setCookie('gem_nickname',data.nickname,365);
+        updateNicknameDisplay();
+      }else if(userNickname){
+        // 계정에 닉네임이 없고 로컬에 있으면 → 계정에 올림
+        cloudSaveNickname(userNickname);
+      }
+    }else if(userNickname){
+      cloudSaveNickname(userNickname);
+    }
+  }catch(e){/* 실패해도 로컬 닉네임 유지 */}
 }
 function updateNicknameDisplay(){
   const el=document.getElementById('nicknameDisplay');
