@@ -818,7 +818,7 @@ onAuthStateChanged(auth, (user)=>{
           <span class="vol-val" id="volVal">70</span>
         </div>
       </div>
-      <button class="ghost" onclick="goMain()">메인으로</button>
+      <button class="ghost" onclick="goBackFromGame()">← 뒤로</button>
       <button class="primary" onclick="resetGame()">다시 시작</button>
     </div>
   </header>
@@ -3536,6 +3536,20 @@ function goMain(){
   document.getElementById('clear-overlay').classList.remove('show');
   document.getElementById('main-overlay').classList.add('show');
   refreshResumeBtn();
+}
+
+// 게임 플레이 중 뒤로가기 — 맥락에 맞는 이전 화면으로
+function goBackFromGame(){
+  if(timerId){clearInterval(timerId);timerId=null;}
+  document.getElementById('clear-overlay').classList.remove('show');
+  if(currentSource==='admin_test'){
+    // 운영자 플레이 테스트 → 제출 상세 화면으로
+    document.getElementById('admin-overlay').classList.add('show');
+    document.getElementById('admin-detail-overlay').classList.add('show');
+  }else{
+    // 일반 플레이 → 스테이지 선택 화면으로
+    openStageSelect();
+  }
 }
 
 // 이어하기 버튼 표시 여부 갱신
