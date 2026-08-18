@@ -470,6 +470,120 @@
     padding: 20px;
   }
   #help-overlay.show { display: flex; }
+  /* 운영자 승인 화면 */
+  #admin-overlay, #admin-detail-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 560;
+    background: var(--bg);
+    align-items: center; justify-content: center;
+    padding: 16px; overflow-y: auto;
+  }
+  #admin-overlay.show, #admin-detail-overlay.show { display: flex; }
+  .admin-box, .admin-detail-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px;
+    width: 100%; max-width: 620px; max-height: 92vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .admin-head { display: flex; align-items: center; justify-content: space-between; }
+  .admin-title { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent-strong); }
+  .admin-sub { font-size: 13px; color: var(--muted); }
+  .admin-list { display: flex; flex-direction: column; gap: 8px; }
+  .admin-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px; border-radius: 12px;
+    background: var(--surface2); border: 1px solid var(--border); cursor: pointer;
+  }
+  .admin-item:hover { border-color: var(--accent); }
+  .admin-item canvas { width: 56px; height: 56px; border-radius: 8px; background: #453F4C; image-rendering: pixelated; flex-shrink: 0; }
+  .admin-item-info { flex: 1; min-width: 0; }
+  .admin-item-name { font-size: 14px; color: var(--text); font-weight: 700; }
+  .admin-item-meta { font-size: 11px; color: var(--muted); }
+  .admin-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0; }
+  .ad-detail-main { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+  #adPreview { width: 320px; max-width: 100%; aspect-ratio: 1; image-rendering: pixelated; border-radius: 10px; background: #453F4C; border: 1px solid var(--border); }
+  .ad-detail-info { flex: 1; min-width: 160px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .ad-playtest { background: var(--surface2); border-radius: 10px; padding: 10px; }
+  .ad-playtest-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; text-align: center; }
+  .ad-playtest-btns { display: flex; gap: 8px; justify-content: center; }
+  .admin-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .ad-reject { color: #F4A9B8; border-color: #F4A9B8; }
+
+  /* 스테이지 에디터 */
+  #editor-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 550;
+    background: var(--bg);
+    align-items: center; justify-content: center;
+    padding: 16px;
+    overflow-y: auto;
+  }
+  #editor-overlay.show { display: flex; }
+  .editor-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    width: 100%; max-width: 620px;
+    max-height: 92vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .editor-head { display: flex; align-items: center; justify-content: space-between; }
+  .editor-title { font-family: 'Space Mono', monospace; font-size: 16px; font-weight: 700; color: var(--accent-strong); }
+  .editor-toolbar { display: flex; flex-direction: column; gap: 8px; }
+  .ed-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .ed-label { font-size: 13px; color: var(--muted); }
+  #edSize, .ed-name {
+    font-family: inherit; font-size: 13px; padding: 6px 10px;
+    border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface2); color: var(--text);
+  }
+  .ed-name { flex: 1; min-width: 120px; }
+  .ed-tool {
+    font-family: inherit; font-size: 12px; padding: 6px 12px; border-radius: 99px;
+    border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .ed-tool:hover { border-color: var(--accent); color: var(--text); }
+  .ed-tool.active { background: var(--accent-strong); border-color: var(--accent-strong); color: #2E2A32; font-weight: 700; }
+  .ed-upload {
+    font-family: inherit; font-size: 12px; padding: 6px 12px; border-radius: 99px;
+    border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .ed-upload:hover { border-color: var(--accent); color: var(--text); }
+  .editor-main { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+  .editor-canvas-wrap { flex: 1; min-width: 240px; display: flex; justify-content: center; }
+  #edCanvas {
+    width: 100%; max-width: 384px; aspect-ratio: 1;
+    image-rendering: pixelated; border-radius: 8px;
+    background: #453F4C; border: 1px solid var(--border);
+    cursor: crosshair; touch-action: none;
+  }
+  .editor-palette {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;
+    width: 180px; flex-shrink: 0;
+  }
+  .ed-swatch {
+    width: 100%; aspect-ratio: 1; border-radius: 6px; cursor: pointer;
+    border: 2px solid transparent; transition: transform .1s;
+  }
+  .ed-swatch:hover { transform: scale(1.1); }
+  .ed-swatch.active { border-color: var(--text); box-shadow: 0 0 0 2px var(--accent-strong); }
+  .editor-status { font-size: 13px; color: var(--muted); min-height: 18px; text-align: center; }
+  .editor-live { font-size: 12px; text-align: center; padding: 6px 10px; border-radius: 8px; background: var(--surface2); color: var(--muted); }
+  .editor-live.ok { color: #9DCEB8; }
+  .editor-live.warn { color: #F4A9B8; }
+  .editor-colors { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+  .ed-colchip {
+    display: flex; align-items: center; gap: 5px;
+    padding: 3px 8px 3px 4px; border-radius: 99px;
+    background: var(--surface2); border: 1.5px solid transparent;
+    font-size: 11px; color: var(--text); cursor: pointer;
+  }
+  .ed-colchip:hover { border-color: var(--border); }
+  .ed-colchip.active { border-color: var(--accent-strong); box-shadow: 0 0 0 1px var(--accent-strong); }
+  .ed-colchip .dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+  .editor-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
   /* 랭킹 모달 */
   #ranking-overlay {
     display: none;
@@ -764,6 +878,89 @@ onAuthStateChanged(auth, (user)=>{
   </div>
 </div>
 
+<div id="admin-overlay">
+  <div class="admin-box">
+    <div class="admin-head">
+      <div class="admin-title">📋 제출 관리 (운영자)</div>
+      <button class="ghost" onclick="closeAdmin()">← 메인</button>
+    </div>
+    <div class="admin-sub" id="adminSub">대기 중인 제출을 확인하세요</div>
+    <div class="admin-list" id="adminList"></div>
+  </div>
+</div>
+
+<div id="admin-detail-overlay">
+  <div class="admin-detail-box">
+    <div class="admin-head">
+      <div class="admin-title" id="adDetailTitle">스테이지 확인</div>
+      <button class="ghost" onclick="closeAdminDetail()">← 목록</button>
+    </div>
+    <div class="ad-detail-main">
+      <canvas id="adPreview" width="320" height="320"></canvas>
+      <div class="ad-detail-info" id="adDetailInfo"></div>
+    </div>
+    <div class="ad-playtest">
+      <div class="ad-playtest-label">난이도별 플레이 테스트</div>
+      <div class="ad-playtest-btns">
+        <button class="ghost" onclick="adPlayTest(1)">🟢 쉬움</button>
+        <button class="ghost" onclick="adPlayTest(2)">🟡 보통</button>
+        <button class="ghost" onclick="adPlayTest(3)">🔴 어려움</button>
+      </div>
+    </div>
+    <div class="admin-actions">
+      <button class="ghost ad-reject" onclick="adReject()">✖ 거절</button>
+      <button class="primary" onclick="adApprove()">✔ 승인하기</button>
+    </div>
+  </div>
+</div>
+
+<div id="editor-overlay">
+  <div class="editor-box">
+    <div class="editor-head">
+      <div class="editor-title">✏️ 스테이지 만들기</div>
+      <button class="ghost" onclick="closeEditor()">← 메인</button>
+    </div>
+    <div class="editor-toolbar">
+      <div class="ed-row">
+        <label class="ed-label">크기</label>
+        <select id="edSize" onchange="edResize()">
+          <option value="16">16 × 16</option>
+          <option value="24">24 × 24</option>
+          <option value="32" selected>32 × 32</option>
+        </select>
+        <input type="text" id="edName" placeholder="스테이지 이름" maxlength="16" class="ed-name">
+      </div>
+      <div class="ed-row">
+        <button class="ed-tool active" id="edToolPaint" onclick="edSetTool('paint')">🖌️ 그리기</button>
+        <button class="ed-tool" id="edToolFill" onclick="edSetTool('fill')">🪣 채우기</button>
+        <button class="ed-tool" id="edToolPick" onclick="edSetTool('pick')">💉 스포이드</button>
+        <button class="ed-tool" id="edToolErase" onclick="edSetTool('erase')">🧽 지우개</button>
+      </div>
+      <div class="ed-row">
+        <button class="ed-tool" id="edUndoBtn" onclick="edUndo()">↩️ 되돌리기</button>
+        <button class="ed-tool" id="edRedoBtn" onclick="edRedo()">↪️ 다시</button>
+        <button class="ed-tool" id="edSymBtn" onclick="edToggleSym()">🪞 대칭 끄기</button>
+        <button class="ed-tool" onclick="edClear()">🗑️ 전체 지우기</button>
+        <label class="ed-upload">📷 이미지
+          <input type="file" id="edImgInput" accept="image/*" onchange="edLoadImage(event)" style="display:none;">
+        </label>
+      </div>
+    </div>
+    <div class="editor-main">
+      <div class="editor-canvas-wrap">
+        <canvas id="edCanvas" width="384" height="384"></canvas>
+      </div>
+      <div class="editor-palette" id="edPalette"></div>
+    </div>
+    <div class="editor-live" id="edLive"></div>
+    <div class="editor-colors" id="edColorList"></div>
+    <div class="editor-status" id="edStatus"></div>
+    <div class="editor-actions">
+      <button class="primary" onclick="edSubmit()">제출하기</button>
+    </div>
+  </div>
+</div>
+
 <div id="ranking-overlay">
   <div class="ranking-box">
     <div class="ranking-head">
@@ -790,6 +987,10 @@ onAuthStateChanged(auth, (user)=>{
       <button class="ghost" id="stageBack">← 메인</button>
     </div>
     <div class="stage-filters">
+      <div class="filter-row" id="sourceTabs">
+        <button class="filter-btn active" data-src="official">🎮 공식 스테이지</button>
+        <button class="filter-btn" data-src="ugc">🎨 유저 제작</button>
+      </div>
       <div class="filter-row" id="catTabs">
         <button class="filter-btn active" data-cat="all">전체</button>
         <button class="filter-btn" data-cat="animal">동물·사물</button>
@@ -815,6 +1016,8 @@ onAuthStateChanged(auth, (user)=>{
     <div class="main-art" id="mainArt"></div>
     <button class="primary main-start" id="resumeBtn" onclick="doResume()" style="display:none;">이어하기</button>
     <button class="primary main-start" onclick="startNewGame()">시작하기</button>
+    <button class="ghost main-start" onclick="openEditor()" style="margin-top:8px;">✏️ 스테이지 만들기</button>
+    <button class="ghost main-start" id="adminBtn" onclick="openAdmin()" style="margin-top:8px;display:none;">📋 제출 관리</button>
     <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;align-items:center;">
       <button class="ghost" style="font-size:12px;padding:8px 20px;border-radius:99px;" onclick="openHelp()">❓ 도움말</button>
       <div class="vol-control">
@@ -966,10 +1169,56 @@ const CNAME={1:'밝은빨강',2:'빨강',3:'진빨강',4:'귤색',5:'주황',6:'
 // (기존 로컬 데이터가 로그인 시 되살아나는 것도 차단)
 const DATA_VERSION='v2';
 
+// ===== 운영자 (UGC 승인 권한) =====
+// 본인 구글 계정 uid를 넣으면 그 계정에서만 승인 화면이 보임.
+// uid 확인: 로그인 후 F12 콘솔에서 window._fb.currentUser.uid
+const ADMIN_UIDS=[
+  '8wyzC0zHPDSBYQNxhRzVHbNMyFx2',
+];
+function isAdmin(){
+  const fb=window._fb;
+  return !!(fb&&fb.currentUser&&ADMIN_UIDS.includes(fb.currentUser.uid));
+}
+
 let currentStage=0;
 let currentDifficulty=1; // 1=쉬움, 2=보통, 3=어려움
+let currentSource='official'; // 'official'(공식) | 'ugc'(사용자제작)
+let ugcStages=[];        // Firebase에서 불러온 승인된 UGC 스테이지 [{id,name,nickname,grid}]
+let ugcLoaded=false;
 let ANS=STAGE_LIST[0].grid;
 applyStageSize(ANS);
+
+// 현재 소스(공식/UGC)에 맞는 스테이지 목록 반환
+function activeStageList(){
+  return currentSource==='ugc' ? ugcStages : STAGE_LIST;
+}
+// 현재 플레이 중인 스테이지 객체
+function currentStageObj(){
+  if(currentSource==='admin_test'&&window._adminTestObj)return window._adminTestObj;
+  const list=activeStageList();
+  return list[currentStage]||STAGE_LIST[0];
+}
+// Firebase에서 승인된 UGC 스테이지 불러오기
+async function loadUgcStages(){
+  const fb=window._fb;
+  if(!fb){return;}
+  try{
+    const col=fb.collection(fb.db,'published_stages');
+    const snap=await fb.getDocs(col);
+    const arr=[];
+    snap.forEach(d=>{
+      const data=d.data();
+      if(data&&data.grid){
+        let grid=data.grid;
+        if(typeof grid==='string'){try{grid=JSON.parse(grid);}catch(e){return;}}
+        arr.push({id:d.id, name:data.name||'무제', nickname:data.nickname||'익명', grid});
+      }
+    });
+    // 생성순(오래된 것부터) 정렬 — 인덱스 안정성
+    arr.sort((a,b)=>(a.id<b.id?-1:1));
+    ugcStages=arr; ugcLoaded=true;
+  }catch(e){ugcLoaded=true;/* 실패해도 공식은 정상 */}
+}
 
 function activeCells(){
   const a=[];
@@ -1524,11 +1773,14 @@ let _stageDone=false;   // 현재 스테이지를 클리어했는지 (true면 �
 // 실제 저장 (즉시)
 function saveProgressNow(){
   // 완료된 스테이지이거나 게임 중이 아니면 저장 안 함
+  if(currentSource==='admin_test')return;     // 테스트 플레이는 진행 저장 안 함
   if(_stageDone)return;                       // 클리어한 보드는 절대 저장 안 함
   if(typeof gems==='undefined'||!gems)return;
   try{
     const data={
       stage:currentStage,
+      source:currentSource,
+      ugcId:(currentSource==='ugc'&&ugcStages[currentStage])?ugcStages[currentStage].id:null,
       difficulty:currentDifficulty,
       gems:gems,
       buf:buf,
@@ -1564,22 +1816,35 @@ function clearProgress(){
 }
 function hasSavedProgress(){
   const p=loadProgress();
-  return p&&p.gems&&typeof p.stage==='number'&&p.stage>=0&&p.stage<STAGE_LIST.length;
+  if(!p||!p.gems)return false;
+  const src=p.source||'official';
+  if(src==='ugc')return true; // UGC는 resume 시점에 목록에서 재확인
+  return typeof p.stage==='number'&&p.stage>=0&&p.stage<STAGE_LIST.length;
 }
 
 // 저장된 진행을 실제 게임에 복원
 function resumeProgress(){
   const p=loadProgress();
-  if(!p)return false;
-  // 저장 이후 stages.js가 바뀌었을 수 있으니 유효성 검사
-  if(typeof p.stage!=='number'||p.stage<0||p.stage>=STAGE_LIST.length||!p.gems){
-    clearProgress();
-    return false;
+  if(!p||!p.gems)return false;
+  const src=p.source||'official';
+  if(src==='ugc'){
+    // UGC 이어하기: 저장된 id로 스테이지를 찾음 (목록 로드 필요)
+    if(!ugcLoaded||ugcStages.length===0){clearProgress();return false;}
+    const idx=ugcStages.findIndex(s=>s.id===p.ugcId);
+    if(idx<0){clearProgress();return false;}
+    currentSource='ugc';
+    currentStage=idx;
+    ANS=ugcStages[idx].grid;
+  }else{
+    if(typeof p.stage!=='number'||p.stage<0||p.stage>=STAGE_LIST.length){
+      clearProgress();return false;
+    }
+    currentSource='official';
+    currentStage=p.stage;
+    ANS=STAGE_LIST[currentStage].grid;
   }
-  currentStage=p.stage;
   currentDifficulty=p.difficulty;
-  _stageDone=false;   // 이어하기 시작 → 저장 재개 허용
-  ANS=STAGE_LIST[currentStage].grid;
+  _stageDone=false;
   applyStageSize(ANS);
   gems=p.gems;
   buf=p.buf||[];
@@ -2516,7 +2781,7 @@ function checkClear(){
       } else recEl.textContent='';
     }
     // 내 순위 표시 (로그인 시, 랭킹 제출 후 조회)
-    showMyRank(currentStage,currentDifficulty);
+    showMyRank(rankStageKey(currentStage),currentDifficulty);
     startClearSequence();
   }
 }
@@ -3015,7 +3280,9 @@ function renderLegend(){
 
 function setStageLabel(){
   const dn=['','쉬움','보통','어려움'][currentDifficulty]||'';
-  document.getElementById('stageLabel').textContent='스테이지 '+(currentStage+1)+'. '+STAGE_LIST[currentStage].name+' · '+dn;
+  const obj=currentStageObj();
+  const prefix=currentSource==='ugc'?'🎨 ':('스테이지 '+(currentStage+1)+'. ');
+  document.getElementById('stageLabel').textContent=prefix+obj.name+' · '+dn;
 }
 
 // 미니 미리보기 캔버스에 스테이지 완성 그림 그리기
@@ -3048,6 +3315,14 @@ function openStageSelect(){
   renderStageGrid();
   // 필터 버튼 이벤트 (최초 1회만 바인딩)
   if(!openStageSelect._bound){
+    // 소스 탭 (공식 / UGC)
+    document.querySelectorAll('#sourceTabs .filter-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        currentSource=btn.dataset.src;
+        document.querySelectorAll('#sourceTabs .filter-btn').forEach(b=>b.classList.toggle('active',b===btn));
+        renderStageGrid();
+      });
+    });
     document.querySelectorAll('#catTabs .filter-btn').forEach(btn=>{
       btn.addEventListener('click',()=>{
         stageFilterCat=btn.dataset.cat;
@@ -3071,22 +3346,28 @@ function openStageSelect(){
 function renderStageGrid(){
   const grid=document.getElementById('stageGrid');
   grid.innerHTML='';
+  // 카테고리 탭은 공식에서만 의미 있음 → UGC면 숨김
+  const catTabs=document.getElementById('catTabs');
+  if(catTabs)catTabs.style.display=(currentSource==='ugc')?'none':'';
+
+  if(currentSource==='ugc'){
+    renderUgcGrid(grid);
+    return;
+  }
   let shown=0, total=0;
   STAGE_LIST.forEach((st,i)=>{
     const cat=stageCategory(st,i);
     const cleared=isStageCleared(i);
-    // 필터 적용
     if(stageFilterCat!=='all'&&cat!==stageFilterCat)return;
     if(stageFilterDone==='clear'&&!cleared)return;
     if(stageFilterDone==='unclear'&&cleared)return;
     total++;
     const card=document.createElement('div');
-    card.className='stage-card'+(i===currentStage?' active':'');
+    card.className='stage-card'+(i===currentStage&&currentSource==='official'?' active':'');
     const cv=document.createElement('canvas');cv.width=96;cv.height=96;
     drawStageThumb(cv,st.grid);
     const nm=document.createElement('div');nm.className='nm';nm.textContent=(i+1)+'. '+st.name;
     card.appendChild(cv);card.appendChild(nm);
-    // 난이도별 클리어 배지 (기록 있으면 클리어 표시 + 시간)
     const diffNames=['','🟢','🟡','🔴'];
     const badgeRow=document.createElement('div');badgeRow.className='diff-badges';
     for(let d=1;d<=3;d++){
@@ -3098,7 +3379,6 @@ function renderStageGrid(){
       badgeRow.appendChild(b);
     }
     card.appendChild(badgeRow);
-    // 최고기록 상세 (클리어한 난이도만)
     for(let d=1;d<=3;d++){
       const r=getBestRecord(i,d);
       if(r){
@@ -3107,34 +3387,87 @@ function renderStageGrid(){
         card.appendChild(bb);
       }
     }
-    // 랭킹 보기 버튼 (클리어 안 해도 순위 확인 가능)
     const rankBtn=document.createElement('button');
     rankBtn.className='stage-rank-btn';
     rankBtn.textContent='🏆 랭킹';
     rankBtn.addEventListener('click',(e)=>{
-      e.stopPropagation();   // 카드 클릭(스테이지 선택)과 분리
-      openRanking(i,1);      // 기본 쉬움 탭으로
+      e.stopPropagation();
+      openRanking(i,1);
     });
     card.appendChild(rankBtn);
     card.addEventListener('click',()=>{selectStage(i);});
     grid.appendChild(card);
     shown++;
   });
-  // 결과 없음 표시
   if(shown===0){
     const e=document.createElement('div');e.className='stage-empty';
     e.textContent='해당하는 스테이지가 없어요';
     grid.appendChild(e);
   }
-  // 카운트 표시 (전체 클리어 진행도 포함)
   const totalCleared=STAGE_LIST.filter((_,i)=>isStageCleared(i)).length;
   document.getElementById('filterCount').textContent=
     shown+'개 표시 · 전체 '+totalCleared+'/'+STAGE_LIST.length+' 클리어';
 }
 
+// UGC 스테이지 목록 렌더링
+function renderUgcGrid(grid){
+  if(!ugcLoaded){
+    const e=document.createElement('div');e.className='stage-empty';
+    e.textContent='유저 제작 스테이지를 불러오는 중…';
+    grid.appendChild(e);
+    // 처음 진입 시 로드 후 다시 렌더
+    loadUgcStages().then(()=>{if(currentSource==='ugc')renderStageGrid();});
+    return;
+  }
+  if(ugcStages.length===0){
+    const e=document.createElement('div');e.className='stage-empty';
+    e.textContent='아직 등록된 유저 제작 스테이지가 없어요';
+    grid.appendChild(e);
+    document.getElementById('filterCount').textContent='';
+    return;
+  }
+  let shown=0;
+  ugcStages.forEach((st,i)=>{
+    const cleared=isStageCleared(i); // 현재 소스가 ugc이므로 ugc 키로 조회됨
+    if(stageFilterDone==='clear'&&!cleared)return;
+    if(stageFilterDone==='unclear'&&cleared)return;
+    const card=document.createElement('div');
+    card.className='stage-card'+(i===currentStage&&currentSource==='ugc'?' active':'');
+    const cv=document.createElement('canvas');cv.width=96;cv.height=96;
+    drawStageThumb(cv,st.grid);
+    const nm=document.createElement('div');nm.className='nm';nm.textContent=st.name;
+    const by=document.createElement('div');by.className='stage-best';by.textContent='by '+st.nickname;
+    card.appendChild(cv);card.appendChild(nm);card.appendChild(by);
+    const diffNames=['','🟢','🟡','🔴'];
+    const badgeRow=document.createElement('div');badgeRow.className='diff-badges';
+    for(let d=1;d<=3;d++){
+      const r=getBestRecord(i,d);
+      const b=document.createElement('span');
+      b.className='diff-badge'+(r?' cleared':'');
+      b.textContent=diffNames[d];
+      badgeRow.appendChild(b);
+    }
+    card.appendChild(badgeRow);
+    const rankBtn=document.createElement('button');
+    rankBtn.className='stage-rank-btn';
+    rankBtn.textContent='🏆 랭킹';
+    rankBtn.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      openRanking(i,1,'ugc');   // UGC 랭킹
+    });
+    card.appendChild(rankBtn);
+    card.addEventListener('click',()=>{selectStage(i);});
+    grid.appendChild(card);
+    shown++;
+  });
+  const totalCleared=ugcStages.filter((_,i)=>isStageCleared(i)).length;
+  document.getElementById('filterCount').textContent=
+    shown+'개 표시 · 전체 '+totalCleared+'/'+ugcStages.length+' 클리어';
+}
+
 function selectStage(i){
   currentStage=i;
-  ANS=STAGE_LIST[i].grid;
+  ANS=activeStageList()[i].grid;
   applyStageSize(ANS);
   // 스테이지 선택 → 난이도 선택 화면으로
   document.getElementById('stage-overlay').classList.remove('show');
@@ -3143,7 +3476,7 @@ function selectStage(i){
 
 // 난이도 선택 화면
 function openDifficultySelect(){
-  document.getElementById('diff-stage-name').textContent=STAGE_LIST[currentStage].name;
+  document.getElementById('diff-stage-name').textContent=currentStageObj().name;
   document.getElementById('diff-overlay').classList.add('show');
 }
 
@@ -3288,12 +3621,17 @@ window.onAuthChanged=function(user){
     // 클라우드 데이터와 동기화
     cloudLoadNickname();   // 계정에 저장된 닉네임 불러오기 (다른 기기에서도 따라옴)
     syncFromCloud();
+    // 운영자면 제출 관리 버튼 표시
+    const ab=document.getElementById('adminBtn');
+    if(ab)ab.style.display=isAdmin()?'':'none';
   }else{
     // 로그아웃 상태
     if(loginBtn)loginBtn.style.display='';
     if(userInfo)userInfo.style.display='none';
     if(userPhoto){userPhoto.src='';userPhoto.style.display='none';}
     setSyncStatus('');
+    const ab=document.getElementById('adminBtn');
+    if(ab)ab.style.display='none';
   }
 };
 
@@ -3339,16 +3677,17 @@ async function pushLocalRecordsToCloud(){
   const fb=window._fb; if(!fb||!fb.currentUser)return;
   const uid=fb.currentUser.uid;
   const tasks=[];
+  // 공식 스테이지 기록만 동기화 (UGC는 별도 관리, 여기선 공식 키를 직접 구성)
   for(let s=0;s<STAGE_LIST.length;s++){
     for(let d=1;d<=3;d++){
+      const officialKey='gem_rec_'+DATA_VERSION+'_'+s+'_'+d;
       let local=null;
-      try{const raw=localStorage.getItem(recStorageKey(s,d));local=raw?JSON.parse(raw):null;}catch(e){}
+      try{const raw=localStorage.getItem(officialKey);local=raw?JSON.parse(raw):null;}catch(e){}
       if(local){
-        // 개인 기록 클라우드 저장
         const ref=fb.doc(fb.db,'users',uid,'records_'+DATA_VERSION,s+'_'+d);
         tasks.push(fb.setDoc(ref,{stage:s,diff:d,time:local.time,moves:local.moves,date:local.date},{merge:true}));
-        // 랭킹에도 제출 (기존 로컬 기록을 랭킹에 반영)
-        if(typeof submitRanking==='function')submitRanking(s,d,local.time,local.moves);
+        // 공식 랭킹에 제출 (문자열 키)
+        if(typeof submitRanking==='function')submitRanking(String(s),d,local.time,local.moves);
       }
     }
   }
@@ -3366,37 +3705,45 @@ function cloudSaveRecord(stage,diff,rec){
 
 // ===== 랭킹 (rankings 컬렉션, 공유) =====
 // 문서 ID: {stage}_{diff}_{uid} → 한 사람이 스테이지×난이도별 기록 하나
-function submitRanking(stage,diff,time,moves){
+// 랭킹용 스테이지 키: 공식은 인덱스 숫자(문자열), UGC는 'ugc_{docId}'
+// → 공식과 UGC가 같은 인덱스여도 랭킹이 절대 섞이지 않음
+function rankStageKey(stageIdx, source){
+  const src=source||currentSource;
+  if(src==='ugc'){
+    const obj=ugcStages[stageIdx];
+    return 'ugc_'+(obj?obj.id:('idx'+stageIdx));
+  }
+  return String(stageIdx);
+}
+
+function submitRanking(stageKey,diff,time,moves){
   const fb=window._fb; if(!fb||!fb.currentUser)return;
   try{
     const uid=fb.currentUser.uid;
-    // 닉네임 우선순위: 직접 설정한 닉네임 → 없으면 uid 앞 5글자 (구글 이름은 쓰지 않음)
     const nick=(userNickname&&userNickname.trim())
       ? userNickname.trim().slice(0,12)
       : ('#'+uid.slice(0,5));
-    const id=stage+'_'+diff+'_'+uid;
+    const id=stageKey+'_'+diff+'_'+uid;
     const ref=fb.doc(fb.db,'rankings_'+DATA_VERSION,id);
-    // 기존 기록보다 좋을 때만 갱신하도록, 먼저 읽고 비교
     fb.getDoc(ref).then(snap=>{
       const prev=snap.exists()?snap.data():null;
       if(!prev||time<prev.time){
-        fb.setDoc(ref,{uid,nickname:nick,stage,diff,time,moves,date:new Date().toISOString()});
+        fb.setDoc(ref,{uid,nickname:nick,stage:stageKey,diff,time,moves,date:new Date().toISOString()});
       }
     }).catch(()=>{
-      // 읽기 실패 시 그냥 쓰기 시도
-      fb.setDoc(ref,{uid,nickname:nick,stage,diff,time,moves,date:new Date().toISOString()});
+      fb.setDoc(ref,{uid,nickname:nick,stage:stageKey,diff,time,moves,date:new Date().toISOString()});
     });
   }catch(e){/* 랭킹 실패해도 게임엔 지장 없음 */}
 }
 
-// 특정 스테이지·난이도의 랭킹 조회 (sortBy: 'time' | 'moves')
-async function fetchRankings(stage,diff,sortBy){
+// 특정 스테이지·난이도의 랭킹 조회 (stageKey: rankStageKey로 만든 문자열)
+async function fetchRankings(stageKey,diff,sortBy){
   const fb=window._fb;
   if(!fb)return [];
   try{
     const col=fb.collection(fb.db,'rankings_'+DATA_VERSION);
     const q=fb.query(col,
-      fb.where('stage','==',stage),
+      fb.where('stage','==',stageKey),
       fb.where('diff','==',diff),
       fb.orderBy(sortBy==='moves'?'moves':'time','asc'),
       fb.limit(20)
@@ -3407,8 +3754,8 @@ async function fetchRankings(stage,diff,sortBy){
     return out;
   }catch(e){
     console.error('랭킹 조회 오류:', e.code, e.message);
-    console.error(e);  // 색인 필요 시 여기에 생성 링크가 포함돼요
-    return null; // 오류 (색인 필요 등)
+    console.error(e);
+    return null;
   }
 }
 
@@ -3463,11 +3810,20 @@ function updateNicknameDisplay(){
 
 // ===== 기록 (localStorage) =====
 // key: "gem_rec_{stage}_{diff}" → {time, moves, date}
-function recStorageKey(stage,diff){return 'gem_rec_'+DATA_VERSION+'_'+stage+'_'+diff;}
+function recStorageKey(stage,diff){
+  // UGC 스테이지는 인덱스 대신 고유 ID로 (인덱스가 바뀌어도 기록 안전)
+  if(currentSource==='ugc'){
+    const obj=ugcStages[stage];
+    const sid=obj?obj.id:('idx'+stage);
+    return 'gem_rec_'+DATA_VERSION+'_ugc_'+sid+'_'+diff;
+  }
+  return 'gem_rec_'+DATA_VERSION+'_'+stage+'_'+diff;
+}
 // 메모리 캐시: 목록 렌더 시 189회 localStorage 읽기 → 캐시 히트로 대체
 const _recCache={};   // key → record | null (null=없음 확정)
 window._recCache=_recCache;   // 클라우드 동기화에서 접근
 function saveBestRecord(stage,diff,time,moves){
+  if(currentSource==='admin_test')return false; // 테스트 플레이는 기록 안 남김
   const key=recStorageKey(stage,diff);
   const prev=getBestRecord(stage,diff);
   // 시간 기준으로 더 나은 기록만 저장
@@ -3476,7 +3832,7 @@ function saveBestRecord(stage,diff,time,moves){
     localStorage.setItem(key,JSON.stringify(rec));
     _recCache[key]=rec;   // 캐시 갱신
     if(typeof cloudSaveRecord==='function')cloudSaveRecord(stage,diff,rec); // 클라우드에도 (로그인 시)
-    if(typeof submitRanking==='function')submitRanking(stage,diff,time,moves); // 랭킹 제출 (로그인 시)
+    if(typeof submitRanking==='function')submitRanking(rankStageKey(stage),diff,time,moves); // 랭킹 제출 (소스별 키)
     return true; // 신기록
   }
   return false;
@@ -3533,20 +3889,498 @@ document.addEventListener('keydown', function(e){
   if(e.key==='Escape') closeHelp();
 });
 
+// ===== 운영자 승인 화면 =====
+let _adSubmissions=[];   // 불러온 제출 목록
+let _adCurrent=null;     // 현재 상세 보는 제출
+
+function openAdmin(){
+  if(!isAdmin()){alert('운영자 전용 기능이에요');return;}
+  document.getElementById('main-overlay').classList.remove('show');
+  document.getElementById('admin-overlay').classList.add('show');
+  loadSubmissions();
+}
+function closeAdmin(){
+  document.getElementById('admin-overlay').classList.remove('show');
+  goMain();
+}
+// 제출 목록 불러오기 (status: pending)
+async function loadSubmissions(){
+  const listEl=document.getElementById('adminList');
+  const sub=document.getElementById('adminSub');
+  listEl.innerHTML='<div class="admin-empty">불러오는 중…</div>';
+  const fb=window._fb;
+  if(!fb||!fb.currentUser){listEl.innerHTML='<div class="admin-empty">로그인이 필요해요</div>';return;}
+  try{
+    const col=fb.collection(fb.db,'submissions');
+    const snap=await fb.getDocs(col);
+    _adSubmissions=[];
+    snap.forEach(d=>{
+      const data=d.data();
+      if(data&&data.status==='pending'){
+        let grid=data.grid;
+        if(typeof grid==='string'){try{grid=JSON.parse(grid);}catch(e){return;}}
+        _adSubmissions.push({id:d.id, name:data.name||'무제', nickname:data.nickname||'익명',
+                             size:data.size||(grid?grid.length:0), grid, createdAt:data.createdAt||''});
+      }
+    });
+    _adSubmissions.sort((a,b)=>(a.createdAt<b.createdAt?-1:1)); // 오래된 것부터
+    renderSubmissionList();
+    sub.textContent='대기 중인 제출 '+_adSubmissions.length+'개';
+  }catch(e){
+    listEl.innerHTML='<div class="admin-empty">불러오지 못했어요<br>'+(e.code||'')+'</div>';
+  }
+}
+function renderSubmissionList(){
+  const listEl=document.getElementById('adminList');
+  listEl.innerHTML='';
+  if(_adSubmissions.length===0){
+    listEl.innerHTML='<div class="admin-empty">대기 중인 제출이 없어요</div>';
+    return;
+  }
+  _adSubmissions.forEach(s=>{
+    const item=document.createElement('div');item.className='admin-item';
+    const cv=document.createElement('canvas');cv.width=56;cv.height=56;
+    drawStageThumb(cv,s.grid);
+    const info=document.createElement('div');info.className='admin-item-info';
+    const nm=document.createElement('div');nm.className='admin-item-name';nm.textContent=s.name;
+    const meta=document.createElement('div');meta.className='admin-item-meta';
+    meta.textContent='by '+s.nickname+' · '+s.size+'×'+s.size;
+    info.appendChild(nm);info.appendChild(meta);
+    item.appendChild(cv);item.appendChild(info);
+    item.addEventListener('click',()=>openAdminDetail(s));
+    listEl.appendChild(item);
+  });
+}
+// 상세 화면 (미리보기 + 플레이테스트 + 승인/거절)
+function openAdminDetail(sub){
+  _adCurrent=sub;
+  document.getElementById('admin-detail-overlay').classList.add('show');
+  document.getElementById('adDetailTitle').textContent=sub.name;
+  const cv=document.getElementById('adPreview');
+  drawStageThumb(cv,sub.grid);
+  // 정보 표시
+  const cnt={}; let active=0;
+  for(let r=0;r<sub.grid.length;r++)for(let c=0;c<sub.grid[r].length;c++){
+    const v=sub.grid[r][c]; if(v!==0){active++;cnt[v]=(cnt[v]||0)+1;}
+  }
+  const colors=Object.keys(cnt).length;
+  const topN=Math.max(...Object.values(cnt),0);
+  const topRatio=active?Math.round(topN/active*100):0;
+  document.getElementById('adDetailInfo').innerHTML=
+    '제작: '+sub.nickname+'<br>'+
+    '크기: '+sub.size+'×'+sub.size+'<br>'+
+    '색: '+colors+'개<br>'+
+    '칸: '+active+'개<br>'+
+    '최다색 비율: '+topRatio+'%';
+}
+function closeAdminDetail(){
+  document.getElementById('admin-detail-overlay').classList.remove('show');
+}
+// 난이도별 플레이 테스트: 제출 스테이지를 임시로 플레이
+function adPlayTest(diff){
+  if(!_adCurrent)return;
+  // 임시 스테이지로 설정해서 게임 시작
+  currentSource='admin_test';
+  window._adminTestObj={name:'[테스트] '+_adCurrent.name, grid:_adCurrent.grid};
+  ANS=_adCurrent.grid;
+  applyStageSize(ANS);
+  currentDifficulty=diff;
+  resumeAudio();
+  document.getElementById('admin-detail-overlay').classList.remove('show');
+  document.getElementById('admin-overlay').classList.remove('show');
+  resetView(); resetGame(); renderLegend(); setStageLabel();
+}
+// 승인: submissions → published_stages 로 이동
+async function adApprove(){
+  if(!_adCurrent)return;
+  const fb=window._fb;
+  if(!fb||!fb.currentUser||!isAdmin()){alert('권한이 없어요');return;}
+  if(!confirm('"'+_adCurrent.name+'"을(를) 승인할까요?\n게임의 유저 제작 탭에 추가돼요.'))return;
+  try{
+    // published_stages에 추가
+    const pubRef=fb.doc(fb.db,'published_stages',_adCurrent.id);
+    await fb.setDoc(pubRef,{
+      name:_adCurrent.name, nickname:_adCurrent.nickname,
+      size:_adCurrent.size, grid:JSON.stringify(_adCurrent.grid),
+      approvedAt:new Date().toISOString()
+    });
+    // submissions의 status를 approved로 (재검토 방지) — 문서 갱신
+    const subRef=fb.doc(fb.db,'submissions',_adCurrent.id);
+    await fb.setDoc(subRef,{status:'approved'},{merge:true});
+    alert('✅ 승인했어요! 유저 제작 탭에 추가됐어요.');
+    ugcLoaded=false; // UGC 목록 새로고침 유도
+    closeAdminDetail();
+    loadSubmissions();
+  }catch(e){
+    alert('승인 실패: '+(e.code||e.message||'권한 확인 필요'));
+  }
+}
+// 거절: status를 rejected로
+async function adReject(){
+  if(!_adCurrent)return;
+  const fb=window._fb;
+  if(!fb||!fb.currentUser||!isAdmin()){alert('권한이 없어요');return;}
+  if(!confirm('"'+_adCurrent.name+'"을(를) 거절할까요?'))return;
+  try{
+    const subRef=fb.doc(fb.db,'submissions',_adCurrent.id);
+    await fb.setDoc(subRef,{status:'rejected'},{merge:true});
+    alert('거절 처리했어요.');
+    closeAdminDetail();
+    loadSubmissions();
+  }catch(e){
+    alert('거절 실패: '+(e.code||e.message||'권한 확인 필요'));
+  }
+}
+
+// ===== 스테이지 에디터 =====
+let edGrid=null;
+let edSize=32;
+let edColor=1;
+let edTool='paint';
+let edDrawing=false;
+let edHistory=[];      // 되돌리기 스택
+let edFuture=[];       // 다시하기 스택
+let edSym='off';       // 대칭: 'off' | 'h'(좌우)
+let edStrokeSnapshot=null; // 한 획 시작 시점 스냅샷
+let edHilite=null;         // 위치 강조할 색 (null=없음)
+
+function edSnapshot(){return edGrid.map(row=>row.slice());}
+function edPushHistory(){
+  edHistory.push(edSnapshot());
+  if(edHistory.length>40)edHistory.shift(); // 최대 40단계
+  edFuture=[]; // 새 동작 시 다시하기 초기화
+  edUpdateUndoButtons();
+}
+function edUndo(){
+  if(edHistory.length===0)return;
+  edFuture.push(edSnapshot());
+  edGrid=edHistory.pop();
+  edSize=edGrid.length;
+  edDraw(); edUpdateLive(); edUpdateUndoButtons();
+  edStatus('되돌렸어요');
+}
+function edRedo(){
+  if(edFuture.length===0)return;
+  edHistory.push(edSnapshot());
+  edGrid=edFuture.pop();
+  edSize=edGrid.length;
+  edDraw(); edUpdateLive(); edUpdateUndoButtons();
+  edStatus('다시 적용했어요');
+}
+function edUpdateUndoButtons(){
+  const u=document.getElementById('edUndoBtn'), r=document.getElementById('edRedoBtn');
+  if(u)u.style.opacity=edHistory.length?'1':'0.4';
+  if(r)r.style.opacity=edFuture.length?'1':'0.4';
+}
+function edToggleSym(){
+  edSym=(edSym==='off')?'h':'off';
+  const b=document.getElementById('edSymBtn');
+  if(b)b.textContent=edSym==='h'?'🪞 대칭 켜짐':'🪞 대칭 끄기';
+  if(b)b.classList.toggle('active',edSym==='h');
+  edStatus(edSym==='h'?'좌우 대칭 켜짐 — 한쪽만 그리면 반대쪽도 그려져요':'대칭 꺼짐');
+}
+
+function openEditor(){
+  document.getElementById('main-overlay').classList.remove('show');
+  document.getElementById('editor-overlay').classList.add('show');
+  edSize=parseInt(document.getElementById('edSize').value,10);
+  if(!edGrid||edGrid.length!==edSize){
+    edGrid=Array.from({length:edSize},()=>new Array(edSize).fill(0));
+  }
+  edHistory=[]; edFuture=[]; edUpdateUndoButtons();
+  edBuildPalette();
+  edSetTool('paint');
+  edDraw(); edUpdateLive();
+  edStatus('격자에 색을 칠해 그림을 그려보세요');
+}
+function closeEditor(){
+  document.getElementById('editor-overlay').classList.remove('show');
+  goMain();
+}
+function edStatus(msg){
+  const el=document.getElementById('edStatus'); if(el)el.textContent=msg||'';
+}
+function edBuildPalette(){
+  const wrap=document.getElementById('edPalette');
+  wrap.innerHTML='';
+  for(let id=1;id<=27;id++){
+    const sw=document.createElement('div');
+    sw.className='ed-swatch'+(id===edColor?' active':'');
+    sw.style.background=PAL[id];
+    sw.title='색 '+id;
+    sw.addEventListener('click',()=>{
+      edColor=id;
+      if(edTool==='erase')edTool='paint';  // 지우개였으면 그리기로, 채우기면 유지
+      document.querySelectorAll('.ed-swatch').forEach(s=>s.classList.remove('active'));
+      sw.classList.add('active');
+      edSyncToolButtons();
+    });
+    wrap.appendChild(sw);
+  }
+}
+function edSetTool(tool){edTool=tool;edSyncToolButtons();}
+function edSyncToolButtons(){
+  const ids={paint:'edToolPaint',fill:'edToolFill',erase:'edToolErase',pick:'edToolPick'};
+  for(const t in ids){
+    const b=document.getElementById(ids[t]);
+    if(b)b.classList.toggle('active',edTool===t);
+  }
+}
+function edResize(){
+  const newSize=parseInt(document.getElementById('edSize').value,10);
+  edPushHistory();
+  const old=edGrid, oldSize=edSize;
+  edSize=newSize;
+  const g=Array.from({length:newSize},()=>new Array(newSize).fill(0));
+  if(old){
+    const n=Math.min(oldSize,newSize);
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)g[r][c]=old[r][c];
+  }
+  edGrid=g; edDraw(); edUpdateLive();
+  edStatus(newSize+'×'+newSize+' 크기로 변경됨');
+}
+function edClear(){
+  edPushHistory();
+  edGrid=Array.from({length:edSize},()=>new Array(edSize).fill(0));
+  edDraw(); edUpdateLive(); edStatus('전체 지웠어요');
+}
+function edDraw(){
+  const cv=document.getElementById('edCanvas');
+  const ctx=cv.getContext('2d');
+  const cell=cv.width/edSize;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(let r=0;r<edSize;r++)for(let c=0;c<edSize;c++){
+    const v=edGrid[r][c];
+    if(v!==0){
+      // 하이라이트 중이면 해당 색만 선명, 나머지는 흐리게
+      ctx.globalAlpha=(edHilite===null||edHilite===v)?1:0.18;
+      ctx.fillStyle=PAL[v];
+      ctx.fillRect(c*cell,r*cell,cell,cell);
+    }
+  }
+  ctx.globalAlpha=1;
+  // 하이라이트 색 칸에 테두리 강조
+  if(edHilite!==null){
+    ctx.strokeStyle='#FFFFFF'; ctx.lineWidth=Math.max(1,cell*0.12);
+    for(let r=0;r<edSize;r++)for(let c=0;c<edSize;c++){
+      if(edGrid[r][c]===edHilite){
+        ctx.strokeRect(c*cell+ctx.lineWidth/2,r*cell+ctx.lineWidth/2,cell-ctx.lineWidth,cell-ctx.lineWidth);
+      }
+    }
+  }
+  ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1;
+  for(let i=0;i<=edSize;i++){
+    ctx.beginPath();ctx.moveTo(i*cell,0);ctx.lineTo(i*cell,cv.height);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,i*cell);ctx.lineTo(cv.width,i*cell);ctx.stroke();
+  }
+}
+function edCellAt(clientX,clientY){
+  const cv=document.getElementById('edCanvas');
+  const rect=cv.getBoundingClientRect();
+  const c=Math.floor((clientX-rect.left)/rect.width*edSize);
+  const r=Math.floor((clientY-rect.top)/rect.height*edSize);
+  if(r<0||r>=edSize||c<0||c>=edSize)return null;
+  return {r,c};
+}
+function edPaintAt(clientX,clientY){
+  const cell=edCellAt(clientX,clientY);
+  if(!cell)return;
+  // 스포이드: 클릭한 칸의 색을 선택 색으로 (빈칸이면 무시)
+  if(edTool==='pick'){
+    const v=edGrid[cell.r][cell.c];
+    if(v!==0){
+      edColor=v;
+      document.querySelectorAll('.ed-swatch').forEach((s,i)=>s.classList.toggle('active',i+1===v));
+      edSetTool('paint'); // 색 뽑고 바로 그리기로
+      edStatus('색 '+v+' 선택됨 — 그리기로 전환');
+    }
+    return;
+  }
+  if(edTool==='fill'){
+    edHilite=null;
+    edFloodFill(cell.r,cell.c);
+    edDraw(); edUpdateLive();
+    return;
+  }
+  edHilite=null;  // 그리기 시작하면 강조 해제
+  const val=(edTool==='erase')?0:edColor;
+  edSetCell(cell.r,cell.c,val);
+  edDraw(); edUpdateLive();
+}
+// 셀 칠하기 (대칭이 켜져 있으면 반대쪽도)
+function edSetCell(r,c,val){
+  edGrid[r][c]=val;
+  if(edSym==='h'){
+    const mc=edSize-1-c;
+    if(mc>=0&&mc<edSize)edGrid[r][mc]=val;
+  }
+}
+// 플러드 필: 클릭한 칸과 연결된 같은 색 영역을 현재 색으로 채움 (4방향)
+function edFloodFill(sr,sc){
+  const target=edGrid[sr][sc];
+  if(target===edColor)return;   // 같은 색이면 변화 없음
+  const q=[[sr,sc]];
+  edGrid[sr][sc]=edColor;
+  while(q.length){
+    const [r,c]=q.pop();
+    const nb=[[r-1,c],[r+1,c],[r,c-1],[r,c+1]];
+    for(const [nr,nc] of nb){
+      if(nr<0||nr>=edSize||nc<0||nc>=edSize)continue;
+      if(edGrid[nr][nc]===target){
+        edGrid[nr][nc]=edColor;
+        q.push([nr,nc]);
+      }
+    }
+  }
+}
+(function(){
+  const cv=document.getElementById('edCanvas');
+  if(!cv)return;
+  cv.addEventListener('pointerdown',e=>{
+    cv.setPointerCapture(e.pointerId);
+    // 스포이드는 그리기가 아니므로 히스토리 저장 안 함
+    if(edTool!=='pick')edPushHistory();
+    edPaintAt(e.clientX,e.clientY);
+    // 채우기·스포이드는 클릭 1회만 — 드래그 페인팅 비활성
+    edDrawing=(edTool!=='fill'&&edTool!=='pick');
+  });
+  cv.addEventListener('pointermove',e=>{if(edDrawing)edPaintAt(e.clientX,e.clientY);});
+  cv.addEventListener('pointerup',()=>{edDrawing=false;});
+  cv.addEventListener('pointercancel',()=>{edDrawing=false;});
+})();
+function edLoadImage(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  const img=new Image();
+  img.onload=()=>{
+    edPushHistory();
+    const tmp=document.createElement('canvas');
+    tmp.width=edSize; tmp.height=edSize;
+    const tctx=tmp.getContext('2d');
+    tctx.drawImage(img,0,0,edSize,edSize);
+    const data=tctx.getImageData(0,0,edSize,edSize).data;
+    for(let r=0;r<edSize;r++)for(let c=0;c<edSize;c++){
+      const i=(r*edSize+c)*4;
+      const R=data[i],G=data[i+1],B=data[i+2],A=data[i+3];
+      if(A<128){edGrid[r][c]=0;continue;}
+      edGrid[r][c]=edNearestColor(R,G,B);
+    }
+    edDraw(); edUpdateLive();
+    edStatus('이미지를 변환했어요 — 격자에서 다듬을 수 있어요');
+  };
+  img.onerror=()=>edStatus('이미지를 불러오지 못했어요');
+  img.src=URL.createObjectURL(file);
+  ev.target.value='';
+}
+function edNearestColor(R,G,B){
+  let best=1,bd=1e18;
+  for(let id=1;id<=27;id++){
+    const h=PAL[id];
+    const pr=parseInt(h.slice(1,3),16),pg=parseInt(h.slice(3,5),16),pb=parseInt(h.slice(5,7),16);
+    const d=0.3*(R-pr)**2+0.59*(G-pg)**2+0.11*(B-pb)**2;
+    if(d<bd){bd=d;best=id;}
+  }
+  return best;
+}
+function edValidate(){
+  const cnt={}; let active=0;
+  for(let r=0;r<edSize;r++)for(let c=0;c<edSize;c++){
+    const v=edGrid[r][c];
+    if(v!==0){active++; cnt[v]=(cnt[v]||0)+1;}
+  }
+  const colors=Object.keys(cnt).length;
+  if(active===0)return{ok:false,msg:'그림이 비어 있어요'};
+  if(active<16)return{ok:false,msg:'그림이 너무 작아요 (최소 16칸)'};
+  if(colors<3)return{ok:false,msg:`색이 너무 적어요 (${colors}색, 최소 3색)`};
+  const topN=Math.max(...Object.values(cnt));
+  const topRatio=topN/active;
+  if(topRatio>0.55)return{ok:false,msg:`한 색이 너무 많아요 (${Math.round(topRatio*100)}%, 55% 이하 권장)`};
+  // 제출 가능하지만 색이 적으면 난이도가 낮다는 안내
+  let hint='';
+  if(colors<8)hint=` (색이 적어 난이도는 낮아요)`;
+  return{ok:true,msg:`좋아요! ${colors}색, ${active}칸, 최다색 ${Math.round(topRatio*100)}%`+hint};
+}
+// 실시간 검증: 그리는 동안 상태를 계속 표시 (제출 가능 여부를 바로 알 수 있음)
+function edUpdateLive(){
+  const el=document.getElementById('edLive');
+  if(el){
+    const v=edValidate();
+    el.textContent=(v.ok?'✅ 제출 가능 — ':'⚠️ ')+v.msg;
+    el.classList.toggle('ok',v.ok);
+    el.classList.toggle('warn',!v.ok);
+  }
+  edRenderColorList();
+}
+// 사용된 색과 개수를 칩으로 표시 (클릭하면 위치 강조)
+function edRenderColorList(){
+  const wrap=document.getElementById('edColorList');
+  if(!wrap)return;
+  const cnt={};
+  for(let r=0;r<edSize;r++)for(let c=0;c<edSize;c++){
+    const v=edGrid[r][c];
+    if(v!==0)cnt[v]=(cnt[v]||0)+1;
+  }
+  const ids=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b]-cnt[a]); // 많은 순
+  wrap.innerHTML='';
+  if(ids.length===0){edHilite=null;return;}
+  // 강조 중인 색이 사라졌으면 해제
+  if(edHilite!==null && !cnt[edHilite])edHilite=null;
+  for(const id of ids){
+    const chip=document.createElement('div');
+    chip.className='ed-colchip'+(edHilite===id?' active':'');
+    const dot=document.createElement('span'); dot.className='dot'; dot.style.background=PAL[id];
+    const label=document.createElement('span'); label.textContent=cnt[id]+'칸';
+    chip.appendChild(dot); chip.appendChild(label);
+    chip.title='색 '+id+' — 클릭하면 위치 강조';
+    chip.addEventListener('click',()=>{
+      edHilite=(edHilite===id)?null:id;  // 토글
+      edDraw(); edRenderColorList();
+    });
+    wrap.appendChild(chip);
+  }
+}
+function edSubmit(){
+  const name=(document.getElementById('edName').value||'').trim();
+  if(!name){edStatus('⚠️ 스테이지 이름을 입력해주세요');return;}
+  const v=edValidate();
+  if(!v.ok){edStatus('⚠️ '+v.msg);return;}
+  const fb=window._fb;
+  if(!fb||!fb.currentUser){edStatus('⚠️ 제출하려면 먼저 로그인해주세요');return;}
+  edStatus('제출 중…');
+  try{
+    const uid=fb.currentUser.uid;
+    const nick=(userNickname&&userNickname.trim())?userNickname.trim().slice(0,12):('#'+uid.slice(0,5));
+    const id=uid+'_'+Date.now();
+    const ref=fb.doc(fb.db,'submissions',id);
+    fb.setDoc(ref,{
+      uid, nickname:nick, name:name.slice(0,16),
+      size:edSize, grid:JSON.stringify(edGrid),
+      status:'pending', createdAt:new Date().toISOString()
+    }).then(()=>{
+      edStatus('✅ 제출 완료! 운영자 확인 후 추가돼요. 감사합니다 🎉');
+    }).catch(()=>{
+      edStatus('⚠️ 제출 실패: 권한을 확인해주세요');
+    });
+  }catch(e){edStatus('⚠️ 제출 중 문제가 생겼어요');}
+}
+
 // ===== 랭킹 모달 =====
 let _rankStage=0, _rankDiff=1, _rankSort='time';
-function openRanking(stage,diff){
-  _rankStage=stage;
+function openRanking(stageIdx,diff,source){
+  const src=source||currentSource;
+  _rankStage=rankStageKey(stageIdx, src);  // 랭킹 조회용 키 (공식/UGC 구분)
   _rankDiff=diff||1;
   _rankSort='time';
-  // 난이도/정렬 탭 활성 상태 반영
   document.querySelectorAll('#rankingDiffTabs .filter-btn').forEach(b=>{
     b.classList.toggle('active',Number(b.dataset.rdiff)===_rankDiff);
   });
   document.querySelectorAll('#rankingSortTabs .filter-btn').forEach(b=>{
     b.classList.toggle('active',b.dataset.rsort==='time');
   });
-  document.getElementById('rankingTitle').textContent='🏆 '+(STAGE_LIST[stage]?STAGE_LIST[stage].name:'랭킹');
+  // 제목: 소스에 맞는 스테이지 이름
+  const list=(src==='ugc')?ugcStages:STAGE_LIST;
+  const nm=list[stageIdx]?list[stageIdx].name:'랭킹';
+  document.getElementById('rankingTitle').textContent='🏆 '+nm;
   document.getElementById('ranking-overlay').classList.add('show');
   loadRankingList();
 }
