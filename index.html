@@ -593,6 +593,9 @@
   .ed-colchip.active { border-color: var(--accent-strong); box-shadow: 0 0 0 1px var(--accent-strong); }
   .ed-colchip .dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
   .editor-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .editor-playtest { background: var(--surface2); border-radius: 10px; padding: 10px; }
+  .editor-playtest-label { font-size: 12px; color: var(--muted); margin-bottom: 8px; text-align: center; }
+  .editor-playtest-btns { display: flex; gap: 8px; justify-content: center; }
   .editor-rules {
     background: var(--surface2); border: 1px solid var(--border);
     border-radius: 10px; padding: 10px 12px; font-size: 11px; color: var(--muted);
@@ -1016,6 +1019,14 @@ onAuthStateChanged(auth, (user)=>{
     <div class="editor-live" id="edLive"></div>
     <div class="editor-colors" id="edColorList"></div>
     <div class="editor-status" id="edStatus"></div>
+    <div class="editor-playtest">
+      <div class="editor-playtest-label">제출 전 플레이 테스트</div>
+      <div class="editor-playtest-btns">
+        <button class="ed-tool" onclick="edPlayTest(1)">🟢 쉬움</button>
+        <button class="ed-tool" onclick="edPlayTest(2)">🟡 보통</button>
+        <button class="ed-tool" onclick="edPlayTest(3)">🔴 어려움</button>
+      </div>
+    </div>
     <div class="editor-rules">
       <div class="editor-rules-title">제출 전 확인해주세요</div>
       <ul>
@@ -1286,6 +1297,7 @@ function activeStageList(){
 // 현재 플레이 중인 스테이지 객체
 function currentStageObj(){
   if(currentSource==='admin_test'&&window._adminTestObj)return window._adminTestObj;
+  if(currentSource==='editor_test'&&window._editorTestObj)return window._editorTestObj;
   const list=activeStageList();
   return list[currentStage]||STAGE_LIST[0];
 }
@@ -1864,7 +1876,7 @@ let _stageDone=false;   // 현재 스테이지를 클리어했는지 (true면 �
 // 실제 저장 (즉시)
 function saveProgressNow(){
   // 완료된 스테이지이거나 게임 중이 아니면 저장 안 함
-  if(currentSource==='admin_test')return;     // 테스트 플레이는 진행 저장 안 함
+  if(currentSource==='admin_test'||currentSource==='editor_test')return;     // 테스트 플레이는 진행 저장 안 함
   if(_stageDone)return;                       // 클리어한 보드는 절대 저장 안 함
   if(typeof gems==='undefined'||!gems)return;
   try{
@@ -3637,6 +3649,10 @@ function goBackFromGame(){
     // 운영자 플레이 테스트 → 제출 상세 화면으로
     document.getElementById('admin-overlay').classList.add('show');
     document.getElementById('admin-detail-overlay').classList.add('show');
+  }else if(currentSource==='editor_test'){
+    // 유저 에디터 테스트 → 에디터로 복귀 (그림 그대로 유지)
+    document.getElementById('editor-overlay').classList.add('show');
+    edDraw(); edUpdateLive();
   }else{
     // 일반 플레이 → 스테이지 선택 화면으로
     openStageSelect();
@@ -3928,7 +3944,7 @@ function recStorageKey(stage,diff){
 const _recCache={};   // key → record | null (null=없음 확정)
 window._recCache=_recCache;   // 클라우드 동기화에서 접근
 function saveBestRecord(stage,diff,time,moves){
-  if(currentSource==='admin_test')return false; // 테스트 플레이는 기록 안 남김
+  if(currentSource==='admin_test'||currentSource==='editor_test')return false; // 테스트 플레이는 기록 안 남김
   const key=recStorageKey(stage,diff);
   const prev=getBestRecord(stage,diff);
   // 시간 기준으로 더 나은 기록만 저장
@@ -4166,6 +4182,22 @@ function adPlayTest(diff){
   resumeAudio();
   document.getElementById('admin-detail-overlay').classList.remove('show');
   document.getElementById('admin-overlay').classList.remove('show');
+  resetView(); resetGame(); renderLegend(); setStageLabel();
+}
+// 에디터에서 만든 그림을 제출 전 테스트 플레이
+function edPlayTest(diff){
+  const v=edValidate();
+  if(!v.ok){edStatus('⚠️ 테스트하려면 먼저: '+v.msg);return;}
+  // 현재 그림을 깊은 복사 (테스트 중 원본 보존)
+  const gridCopy=edGrid.map(row=>row.slice());
+  const nm=(document.getElementById('edName').value||'내 스테이지').trim()||'내 스테이지';
+  currentSource='editor_test';
+  window._editorTestObj={name:'[테스트] '+nm, grid:gridCopy};
+  ANS=gridCopy;
+  applyStageSize(ANS);
+  currentDifficulty=diff;
+  resumeAudio();
+  document.getElementById('editor-overlay').classList.remove('show');
   resetView(); resetGame(); renderLegend(); setStageLabel();
 }
 // 승인: submissions → published_stages 로 이동
