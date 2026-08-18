@@ -400,6 +400,7 @@
   }
   .nick-title { font-family: 'Space Mono',monospace; font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
   .nick-desc { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .nick-privacy { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.5; opacity: 0.85; }
   .nick-input {
     width: 100%; padding: 10px 14px;
     background: var(--surface2,#1a2235);
@@ -583,8 +584,55 @@
   .ed-colchip.active { border-color: var(--accent-strong); box-shadow: 0 0 0 1px var(--accent-strong); }
   .ed-colchip .dot { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
   .editor-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .editor-rules {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; font-size: 11px; color: var(--muted);
+  }
+  .editor-rules-title { font-weight: 700; color: var(--text); margin-bottom: 5px; font-size: 12px; }
+  .editor-rules ul { margin: 0; padding-left: 16px; line-height: 1.6; }
+  .editor-rules a { color: var(--accent-strong); }
 
   /* 랭킹 모달 */
+  /* 이미지 크롭 화면 */
+  #crop-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 570;
+    background: rgba(46,42,50,0.92);
+    align-items: center; justify-content: center; padding: 16px;
+  }
+  #crop-overlay.show { display: flex; }
+  .crop-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 18px;
+    width: 100%; max-width: 460px;
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+  }
+  .crop-title { font-size: 15px; font-weight: 700; color: var(--text); }
+  .crop-sub { font-size: 12px; color: var(--muted); }
+  .crop-stage {
+    position: relative; touch-action: none;
+    border-radius: 10px; overflow: hidden; background: #1a1720;
+    max-width: 100%;
+  }
+  #cropCanvas { display: block; max-width: 100%; }
+  .crop-frame {
+    position: absolute; box-sizing: border-box;
+    border: 2px solid var(--accent-strong);
+    box-shadow: 0 0 0 9999px rgba(46,42,50,0.6);
+    cursor: move; touch-action: none;
+  }
+  .crop-handle {
+    position: absolute; width: 18px; height: 18px;
+    background: var(--accent-strong); border: 2px solid #fff;
+    border-radius: 50%; touch-action: none;
+  }
+  .crop-handle[data-corner="nw"] { left: -10px; top: -10px; cursor: nwse-resize; }
+  .crop-handle[data-corner="ne"] { right: -10px; top: -10px; cursor: nesw-resize; }
+  .crop-handle[data-corner="sw"] { left: -10px; bottom: -10px; cursor: nesw-resize; }
+  .crop-handle[data-corner="se"] { right: -10px; bottom: -10px; cursor: nwse-resize; }
+  .crop-actions { display: flex; gap: 8px; justify-content: flex-end; width: 100%; margin-top: 4px; }
+
+  /* 이미지 크롭 화면 끝 */
   #ranking-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 600;
@@ -959,8 +1007,37 @@ onAuthStateChanged(auth, (user)=>{
     <div class="editor-live" id="edLive"></div>
     <div class="editor-colors" id="edColorList"></div>
     <div class="editor-status" id="edStatus"></div>
+    <div class="editor-rules">
+      <div class="editor-rules-title">제출 전 확인해주세요</div>
+      <ul>
+        <li>본인이 직접 만든 창작물만 제출해주세요.</li>
+        <li>타인의 저작물(캐릭터·로고 등), 음란물, 혐오·폭력적 내용은 금지돼요.</li>
+        <li>제출한 스테이지는 게임에 사용될 수 있으며, 운영자가 거절하거나 삭제할 수 있어요.</li>
+        <li>문의·신고: <a href="mailto:ddiscloud@gmail.com">ddiscloud@gmail.com</a></li>
+      </ul>
+    </div>
     <div class="editor-actions">
       <button class="primary" onclick="edSubmit()">제출하기</button>
+    </div>
+  </div>
+</div>
+
+<div id="crop-overlay">
+  <div class="crop-box">
+    <div class="crop-title">이미지에서 사용할 부분을 선택하세요</div>
+    <div class="crop-sub">정사각형 영역을 드래그해 위치를 맞춰요</div>
+    <div class="crop-stage" id="cropStage">
+      <canvas id="cropCanvas"></canvas>
+      <div class="crop-frame" id="cropFrame">
+        <div class="crop-handle" data-corner="nw"></div>
+        <div class="crop-handle" data-corner="ne"></div>
+        <div class="crop-handle" data-corner="sw"></div>
+        <div class="crop-handle" data-corner="se"></div>
+      </div>
+    </div>
+    <div class="crop-actions">
+      <button class="ghost" onclick="cropCancel()">취소</button>
+      <button class="primary" onclick="cropConfirm()">이 부분 사용</button>
     </div>
   </div>
 </div>
@@ -1055,6 +1132,7 @@ onAuthStateChanged(auth, (user)=>{
     <div class="nick-title">닉네임 설정</div>
     <div class="nick-desc">같은 기기에서 자동으로 기억됩니다</div>
     <input id="nickInput" class="nick-input" type="text" maxlength="12" placeholder="닉네임 입력 (최대 12자)">
+    <div class="nick-privacy">실명·연락처 등 개인정보는 넣지 마세요. 닉네임은 랭킹에 공개됩니다.</div>
     <div style="display:flex;gap:8px;justify-content:center;margin-top:14px;">
       <button class="ghost" id="nickCancel">취소</button>
       <button class="primary" onclick="submitNickname()">저장</button>
@@ -4339,30 +4417,152 @@ function edFloodFill(sr,sc){
   cv.addEventListener('pointerup',()=>{edDrawing=false;});
   cv.addEventListener('pointercancel',()=>{edDrawing=false;});
 })();
+// 크롭 상태
+let _cropImg=null;       // 로드된 이미지
+let _cropDisp={w:0,h:0}; // 화면에 표시된 이미지 크기(px)
+let _cropSide=0;         // 크롭 정사각형 한 변(표시 px)
+let _cropPos={x:0,y:0};  // 크롭 프레임 좌상단(표시 px)
+let _cropDrag=null;      // 드래그 중 오프셋
+
 function edLoadImage(ev){
   const file=ev.target.files&&ev.target.files[0];
   if(!file)return;
   const img=new Image();
   img.onload=()=>{
-    edPushHistory();
-    const tmp=document.createElement('canvas');
-    tmp.width=edSize; tmp.height=edSize;
-    const tctx=tmp.getContext('2d');
-    tctx.drawImage(img,0,0,edSize,edSize);
-    const data=tctx.getImageData(0,0,edSize,edSize).data;
-    for(let r=0;r<edSize;r++)for(let c=0;c<edSize;c++){
-      const i=(r*edSize+c)*4;
-      const R=data[i],G=data[i+1],B=data[i+2],A=data[i+3];
-      if(A<128){edGrid[r][c]=0;continue;}
-      edGrid[r][c]=edNearestColor(R,G,B);
+    if(img.width===img.height){
+      // 정사각형이면 바로 변환
+      edApplyImageRegion(img, 0, 0, img.width);
+    }else{
+      // 비정사각형이면 크롭 화면 띄우기
+      openCrop(img);
     }
-    edDraw(); edUpdateLive();
-    edStatus('이미지를 변환했어요 — 격자에서 다듬을 수 있어요');
   };
   img.onerror=()=>edStatus('이미지를 불러오지 못했어요');
   img.src=URL.createObjectURL(file);
   ev.target.value='';
 }
+// 이미지의 특정 정사각형 영역(원본 px)을 격자로 변환
+function edApplyImageRegion(img, sx, sy, side){
+  edPushHistory();
+  const tmp=document.createElement('canvas');
+  tmp.width=edSize; tmp.height=edSize;
+  const tctx=tmp.getContext('2d');
+  tctx.drawImage(img, sx, sy, side, side, 0, 0, edSize, edSize);
+  const data=tctx.getImageData(0,0,edSize,edSize).data;
+  for(let r=0;r<edSize;r++)for(let c=0;c<edSize;c++){
+    const i=(r*edSize+c)*4;
+    const R=data[i],G=data[i+1],B=data[i+2],A=data[i+3];
+    if(A<128){edGrid[r][c]=0;continue;}
+    edGrid[r][c]=edNearestColor(R,G,B);
+  }
+  edDraw(); edUpdateLive();
+  edStatus('이미지를 변환했어요 — 격자에서 다듬을 수 있어요');
+}
+// 크롭 화면 열기
+function openCrop(img){
+  _cropImg=img;
+  const overlay=document.getElementById('crop-overlay');
+  const cv=document.getElementById('cropCanvas');
+  // 표시 크기: 최대 400px에 맞춰 축소
+  const maxDisp=400;
+  const scale=Math.min(maxDisp/img.width, maxDisp/img.height, 1);
+  const dw=Math.round(img.width*scale), dh=Math.round(img.height*scale);
+  _cropDisp={w:dw,h:dh};
+  cv.width=dw; cv.height=dh;
+  cv.getContext('2d').drawImage(img,0,0,dw,dh);
+  // 초기 크롭: 짧은 변 기준 중앙 정사각형
+  _cropSide=Math.min(dw,dh);
+  _cropPos={x:(dw-_cropSide)/2, y:(dh-_cropSide)/2};
+  updateCropFrame();
+  overlay.classList.add('show');
+}
+function updateCropFrame(){
+  const f=document.getElementById('cropFrame');
+  f.style.left=_cropPos.x+'px';
+  f.style.top=_cropPos.y+'px';
+  f.style.width=_cropSide+'px';
+  f.style.height=_cropSide+'px';
+}
+function cropCancel(){
+  document.getElementById('crop-overlay').classList.remove('show');
+  _cropImg=null;
+}
+function cropConfirm(){
+  if(!_cropImg)return;
+  // 표시 좌표 → 원본 좌표로 환산
+  const scaleX=_cropImg.width/_cropDisp.w;
+  const scaleY=_cropImg.height/_cropDisp.h;
+  const sx=_cropPos.x*scaleX;
+  const sy=_cropPos.y*scaleY;
+  const side=_cropSide*scaleX; // 정사각형이라 scaleX=scaleY 근사
+  document.getElementById('crop-overlay').classList.remove('show');
+  edApplyImageRegion(_cropImg, sx, sy, side);
+  _cropImg=null;
+}
+// 크롭 프레임 드래그
+(function(){
+  const stage=document.getElementById('cropStage');
+  const frame=document.getElementById('cropFrame');
+  if(!stage||!frame)return;
+  function clampPos(){
+    _cropPos.x=Math.max(0,Math.min(_cropPos.x,_cropDisp.w-_cropSide));
+    _cropPos.y=Math.max(0,Math.min(_cropPos.y,_cropDisp.h-_cropSide));
+  }
+  frame.addEventListener('pointerdown',e=>{
+    frame.setPointerCapture(e.pointerId);
+    const rect=stage.getBoundingClientRect();
+    _cropDrag={dx:(e.clientX-rect.left)-_cropPos.x, dy:(e.clientY-rect.top)-_cropPos.y};
+  });
+  frame.addEventListener('pointermove',e=>{
+    if(!_cropDrag)return;
+    const rect=stage.getBoundingClientRect();
+    _cropPos.x=(e.clientX-rect.left)-_cropDrag.dx;
+    _cropPos.y=(e.clientY-rect.top)-_cropDrag.dy;
+    clampPos(); updateCropFrame();
+  });
+  frame.addEventListener('pointerup',()=>{_cropDrag=null;});
+  frame.addEventListener('pointercancel',()=>{_cropDrag=null;});
+
+  // 모서리 핸들로 크기 조절 (정사각형 유지)
+  let _resize=null;
+  stage.querySelectorAll('.crop-handle').forEach(h=>{
+    h.addEventListener('pointerdown',e=>{
+      e.stopPropagation();  // 프레임 이동과 분리
+      h.setPointerCapture(e.pointerId);
+      const rect=stage.getBoundingClientRect();
+      // 고정될 반대편 모서리(anchor)와 시작 정보 기록
+      const corner=h.dataset.corner;
+      const left=_cropPos.x, top=_cropPos.y, right=_cropPos.x+_cropSide, bottom=_cropPos.y+_cropSide;
+      // anchor = 드래그하는 모서리의 대각선 반대편 (고정점)
+      const anchor={
+        nw:{x:right,y:bottom}, ne:{x:left,y:bottom},
+        sw:{x:right,y:top},    se:{x:left,y:top}
+      }[corner];
+      _resize={corner,anchor};
+    });
+    h.addEventListener('pointermove',e=>{
+      if(!_resize)return;
+      const rect=stage.getBoundingClientRect();
+      const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+      const a=_resize.anchor;
+      // anchor에서 마우스까지의 거리 → 정사각형 한 변 (가로/세로 중 큰 쪽)
+      let side=Math.max(Math.abs(mx-a.x), Math.abs(my-a.y));
+      // 최소 크기 & 이미지 경계 제한
+      const minSide=20;
+      // anchor 방향에 따라 side가 넘지 않도록 최대치 계산
+      const maxByX=(mx>=a.x)?(_cropDisp.w-a.x):a.x;
+      const maxByY=(my>=a.y)?(_cropDisp.h-a.y):a.y;
+      side=Math.max(minSide, Math.min(side, maxByX, maxByY));
+      // 새 위치: anchor 기준으로 방향 결정
+      const nx=(mx>=a.x)?a.x:a.x-side;
+      const ny=(my>=a.y)?a.y:a.y-side;
+      _cropSide=side; _cropPos.x=nx; _cropPos.y=ny;
+      updateCropFrame();
+    });
+    h.addEventListener('pointerup',()=>{_resize=null;});
+    h.addEventListener('pointercancel',()=>{_resize=null;});
+  });
+})();
 function edNearestColor(R,G,B){
   let best=1,bd=1e18;
   for(let id=1;id<=27;id++){
