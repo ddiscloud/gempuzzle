@@ -606,6 +606,41 @@
 
   /* 랭킹 모달 */
   /* 이미지 크롭 화면 */
+  /* 인터랙티브 튜토리얼 */
+  #tutorial-bar {
+    display: none;
+    position: fixed; left: 0; right: 0; top: 0; z-index: 540;
+    padding: 16px; pointer-events: none;
+    justify-content: center;
+  }
+  #tutorial-bar.show { display: flex; }
+  .tut-box {
+    pointer-events: auto;
+    background: var(--surface); border: 2px solid var(--accent-strong);
+    border-radius: 14px; padding: 14px 16px;
+    max-width: 440px; width: 100%;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .tut-msg { font-size: 14px; color: var(--text); line-height: 1.6; }
+  .tut-msg strong { color: var(--accent-strong); }
+  .tut-actions { display: flex; justify-content: space-between; align-items: center; }
+  .tut-skip {
+    font-family: inherit; font-size: 12px; padding: 6px 12px; border-radius: 99px;
+    border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .tut-next {
+    font-family: inherit; font-size: 13px; font-weight: 700; padding: 7px 18px; border-radius: 99px;
+    border: none; background: var(--accent-strong); color: #2E2A32; cursor: pointer;
+  }
+  .tut-next:hover { background: #F7BCC7; }
+  /* 튜토리얼 하이라이트 (특정 요소 강조) */
+  .tut-highlight {
+    position: relative; z-index: 545;
+    box-shadow: 0 0 0 3px var(--accent-strong), 0 0 20px 4px rgba(244,169,184,0.6) !important;
+    border-radius: 8px;
+  }
+
   #crop-overlay {
     display: none;
     position: fixed; inset: 0; z-index: 570;
@@ -930,9 +965,9 @@ onAuthStateChanged(auth, (user)=>{
     </div>
     <div id="clear-best" style="font-size:13px;color:var(--muted);margin-bottom:8px;min-height:18px;"></div>
     <div id="clear-rank" style="font-size:14px;color:var(--accent-strong);margin-bottom:16px;min-height:18px;font-weight:700;"></div>
-    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-      <button class="ghost" onclick="openRanking(currentStage,currentDifficulty)">🏆 랭킹</button>
-      <button class="ghost" onclick="document.getElementById('clear-overlay').classList.remove('show');openStageSelect()">스테이지 목록</button>
+    <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;" id="clearButtons">
+      <button class="ghost" id="clearRankBtn" onclick="openRanking(currentStage,currentDifficulty)">🏆 랭킹</button>
+      <button class="ghost" id="clearListBtn" onclick="clearGoBack()">스테이지 목록</button>
       <button class="primary" onclick="resetGame();document.getElementById('clear-overlay').classList.remove('show')">다시 도전</button>
     </div>
   </div>
@@ -1038,6 +1073,16 @@ onAuthStateChanged(auth, (user)=>{
     </div>
     <div class="editor-actions">
       <button class="primary" onclick="edSubmit()">제출하기</button>
+    </div>
+  </div>
+</div>
+
+<div id="tutorial-bar">
+  <div class="tut-box">
+    <div class="tut-msg" id="tutMsg"></div>
+    <div class="tut-actions">
+      <button class="tut-skip" id="tutSkip" onclick="tutSkip()">건너뛰기</button>
+      <button class="tut-next" id="tutNext" onclick="tutNext()">다음</button>
     </div>
   </div>
 </div>
@@ -1298,6 +1343,7 @@ function activeStageList(){
 function currentStageObj(){
   if(currentSource==='admin_test'&&window._adminTestObj)return window._adminTestObj;
   if(currentSource==='editor_test'&&window._editorTestObj)return window._editorTestObj;
+  if(currentSource==='tutorial'&&window._tutorialObj)return window._tutorialObj;
   const list=activeStageList();
   return list[currentStage]||STAGE_LIST[0];
 }
@@ -1876,7 +1922,7 @@ let _stageDone=false;   // 현재 스테이지를 클리어했는지 (true면 �
 // 실제 저장 (즉시)
 function saveProgressNow(){
   // 완료된 스테이지이거나 게임 중이 아니면 저장 안 함
-  if(currentSource==='admin_test'||currentSource==='editor_test')return;     // 테스트 플레이는 진행 저장 안 함
+  if(currentSource==='admin_test'||currentSource==='editor_test'||currentSource==='tutorial')return;     // 테스트·튜토리얼은 진행 저장 안 함
   if(_stageDone)return;                       // 클리어한 보드는 절대 저장 안 함
   if(typeof gems==='undefined'||!gems)return;
   try{
@@ -2865,6 +2911,18 @@ function checkClear(){
   if(ok){
     const elapsed=stopTimer();
     _stageDone=true;   // 이후 flush가 완성 보드를 저장하지 못하게
+    // 튜토리얼 클리어: 기록·랭킹 없이 축하만 → 스테이지 선택으로
+    if(currentSource==='tutorial'){
+      localStorage.setItem('gem_tutorial_done','1');
+      document.getElementById('tutorial-bar').classList.remove('show');
+      playClearSound();
+      setTimeout(()=>{
+        alert('🎉 완성했어요! 이제 게임 방법을 익혔어요.\n다양한 스테이지에 도전해보세요!');
+        currentSource='official';
+        openStageSelect();
+      },600);
+      return;
+    }
     stageCleared.add(currentStage);
     clearProgress();  // 클리어 시 이어하기 저장 삭제
     recordResult(currentStage, elapsed, moves);
@@ -3207,6 +3265,7 @@ function startClearSequence(){
   // 결과창: 반짝임이 완전히 끝나고 폭죽도 충분히 본 뒤
   const resultDelay=Math.max(2200, sparkleDone+600);
   setTimeout(()=>{
+    updateClearButtons();  // 맥락에 맞게 버튼 조정 (테스트면 랭킹 숨김·라벨 변경)
     document.getElementById('clear-overlay').classList.add('show');
   }, resultDelay);
 }
@@ -3641,6 +3700,32 @@ function goMain(){
   refreshResumeBtn();
 }
 
+// 클리어 결과창에서 '목록/돌아가기' — 맥락에 맞게
+function clearGoBack(){
+  document.getElementById('clear-overlay').classList.remove('show');
+  if(currentSource==='editor_test'){
+    document.getElementById('editor-overlay').classList.add('show');
+    edDraw(); edUpdateLive();
+  }else if(currentSource==='admin_test'){
+    document.getElementById('admin-overlay').classList.add('show');
+    document.getElementById('admin-detail-overlay').classList.add('show');
+  }else{
+    openStageSelect();
+  }
+}
+// 클리어 화면 버튼을 맥락에 맞게 조정
+function updateClearButtons(){
+  const isTest=(currentSource==='editor_test'||currentSource==='admin_test');
+  const rankBtn=document.getElementById('clearRankBtn');
+  const listBtn=document.getElementById('clearListBtn');
+  if(rankBtn)rankBtn.style.display=isTest?'none':'';
+  if(listBtn){
+    listBtn.textContent=(currentSource==='editor_test')?'✏️ 에디터로'
+      :(currentSource==='admin_test')?'← 제출 목록'
+      :'스테이지 목록';
+  }
+}
+
 // 게임 플레이 중 뒤로가기 — 맥락에 맞는 이전 화면으로
 function goBackFromGame(){
   if(timerId){clearInterval(timerId);timerId=null;}
@@ -3653,6 +3738,12 @@ function goBackFromGame(){
     // 유저 에디터 테스트 → 에디터로 복귀 (그림 그대로 유지)
     document.getElementById('editor-overlay').classList.add('show');
     edDraw(); edUpdateLive();
+  }else if(currentSource==='tutorial'){
+    // 튜토리얼 중 나가기 → 완료 처리하고 메인으로
+    localStorage.setItem('gem_tutorial_done','1');
+    document.getElementById('tutorial-bar').classList.remove('show');
+    currentSource='official';
+    goMain();
   }else{
     // 일반 플레이 → 스테이지 선택 화면으로
     openStageSelect();
@@ -3680,7 +3771,71 @@ function doResume(){
 function startNewGame(){
   resumeAudio(); startBgm();  // 시작하기 시 배경음악 시작
   clearProgress();
+  // 첫 방문이면 튜토리얼 먼저
+  if(!localStorage.getItem('gem_tutorial_done')){
+    startTutorial();
+    return;
+  }
   openStageSelect();
+}
+
+// ===== 인터랙티브 튜토리얼 =====
+// 전용 스테이지: 8x8 단순 하트 (색 3개). 정해진 배치라 단계 안내가 정확함.
+const TUT_GRID=[
+  [13,13,13,13],
+  [13,13,13,13],
+  [8,8,8,8],
+  [8,8,8,8],
+];
+let _tutStep=0;
+const TUT_STEPS=[
+  {msg:'<strong>젬 퍼즐</strong>에 오신 걸 환영해요! 흩어진 보석을 옮겨 <strong>그림을 완성</strong>하는 게임이에요. 천천히 알려드릴게요.'},
+  {msg:'화면의 <strong>격자</strong>가 보이죠? 각 칸에는 <strong>정해진 정답 색</strong>이 있어요. 같은 색 보석을 그 자리에 놓으면 완성돼요.'},
+  {msg:'<strong>보석을 클릭</strong>해서 선택하고, <strong>빈 칸을 클릭</strong>하면 옮겨져요. 목적지의 정답 색과 같은 보석만 놓을 수 있어요.'},
+  {msg:'같은 색이 <strong>붙어 있으면 한 번에</strong> 묶여서 선택돼요. 덩어리째 옮길 수 있어 편해요.'},
+  {msg:'화면 아래 <strong>버퍼</strong>는 임시 보관함이에요. 막힌 보석을 잠깐 빼둘 때 써요.'},
+  {msg:'한 가지 <strong>색을 모두 완성</strong>하면 반짝임과 함께 <strong>버퍼 칸이 늘어나요</strong>! 색을 하나씩 완성해가며 여유 공간을 얻는 게 요령이에요.'},
+  {msg:'이제 직접 해보세요! 보석을 옮겨 <strong>위쪽 색과 아래쪽 색</strong>을 맞추면 돼요. 다 하면 <strong>클리어</strong>! 준비됐으면 <strong>시작</strong>을 눌러요.', last:true},
+];
+
+function startTutorial(){
+  _tutStep=0;
+  currentSource='tutorial';
+  window._tutorialObj={name:'튜토리얼', grid:TUT_GRID};
+  ANS=TUT_GRID;
+  applyStageSize(ANS);
+  currentDifficulty=1; // 가장 쉽게
+  document.getElementById('main-overlay').classList.remove('show');
+  resetView(); resetGame(); renderLegend(); setStageLabel();
+  document.getElementById('tutorial-bar').classList.add('show');
+  tutShow();
+}
+function tutShow(){
+  const step=TUT_STEPS[_tutStep];
+  document.getElementById('tutMsg').innerHTML=step.msg;
+  const nextBtn=document.getElementById('tutNext');
+  nextBtn.textContent=step.last?'시작':'다음';
+}
+function tutNext(){
+  if(_tutStep>=TUT_STEPS.length-1){
+    // 튜토리얼 종료 → 실제 플레이 (튜토리얼 스테이지를 그대로 플레이)
+    tutFinish();
+    return;
+  }
+  _tutStep++;
+  tutShow();
+}
+function tutSkip(){
+  localStorage.setItem('gem_tutorial_done','1');
+  document.getElementById('tutorial-bar').classList.remove('show');
+  currentSource='official';
+  openStageSelect();
+}
+function tutFinish(){
+  // 안내는 닫되, 튜토리얼 하트는 계속 플레이 가능 (클리어하면 완료 처리)
+  localStorage.setItem('gem_tutorial_done','1');
+  document.getElementById('tutorial-bar').classList.remove('show');
+  setStatus('하트를 완성해보세요! 다 하면 클리어예요',false);
 }
 
 // 메인 페이지 미리보기 아트 (대표 스테이지 3개 썸네일)
@@ -3944,7 +4099,7 @@ function recStorageKey(stage,diff){
 const _recCache={};   // key → record | null (null=없음 확정)
 window._recCache=_recCache;   // 클라우드 동기화에서 접근
 function saveBestRecord(stage,diff,time,moves){
-  if(currentSource==='admin_test'||currentSource==='editor_test')return false; // 테스트 플레이는 기록 안 남김
+  if(currentSource==='admin_test'||currentSource==='editor_test'||currentSource==='tutorial')return false; // 테스트·튜토리얼은 기록 안 남김
   const key=recStorageKey(stage,diff);
   const prev=getBestRecord(stage,diff);
   // 시간 기준으로 더 나은 기록만 저장
