@@ -4315,12 +4315,20 @@ function openAdminDetail(sub){
   const colors=Object.keys(cnt).length;
   const topN=Math.max(...Object.values(cnt),0);
   const topRatio=active?Math.round(topN/active*100):0;
-  document.getElementById('adDetailInfo').innerHTML=
-    '제작: '+sub.nickname+'<br>'+
-    '크기: '+sub.size+'×'+sub.size+'<br>'+
-    '색: '+colors+'개<br>'+
-    '칸: '+active+'개<br>'+
-    '최다색 비율: '+topRatio+'%';
+  // 제출 데이터는 HTML로 해석하지 않고 문자 그대로 표시한다.
+  const info=document.getElementById('adDetailInfo');
+  const lines=[
+    '제작: '+sub.nickname,
+    '크기: '+sub.size+'×'+sub.size,
+    '색: '+colors+'개',
+    '칸: '+active+'개',
+    '최다색 비율: '+topRatio+'%'
+  ];
+  info.textContent='';
+  lines.forEach((line,index)=>{
+    if(index>0)info.appendChild(document.createElement('br'));
+    info.appendChild(document.createTextNode(line));
+  });
 }
 function closeAdminDetail(){
   document.getElementById('admin-detail-overlay').classList.remove('show');
