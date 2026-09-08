@@ -1,0 +1,79 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.uid == '8wyzC0zHPDSBYQNxhRzVHbNMyFx2';
+    }
+
+    function validRankingStage(stage) {
+      // v2 has 63 official stages, indexed 0..62. Keep this in sync with stages.js.
+      // UGC keys retain the existing 'ugc_' + published document ID format.
+      return stage is string && (
+        stage.matches('[0-9]|[1-5][0-9]|6[0-2]')
+        || (stage.matches('ugc_[^/]{1,200}')
+          && exists(/databases/$(database)/documents/published_stages/$(stage.replace('^ugc_', ''))))
+      );
+    }
+
+    function validRanking(entryId) {
+      let data = request.resource.data;
+      let fields = ['uid', 'nickname', 'stage', 'diff', 'time', 'moves', 'date'];
+      return data.keys().hasAll(fields) && data.keys().hasOnly(fields)
+        && data.uid is string && data.uid == request.auth.uid
+        && data.diff is int && data.diff in [1, 2, 3]
+        && validRankingStage(data.stage)
+        && entryId == data.stage + '_' + string(data.diff) + '_' + request.auth.uid
+        && data.nickname is string
+        && data.nickname.size() <= 12 && data.nickname.trim().size() > 0
+        // Milliseconds from performance.now() can have a fractional part.
+        // Safe-number bounds reject NaN/infinity without imposing a new play-time limit.
+        && data.time is number && data.time > 0 && data.time <= 9007199254740991
+        && data.moves is int && data.moves > 0 && data.moves <= 9007199254740991
+        // Preserve the client's ISO string format. This is not a trusted server time.
+        && data.date is string
+        && data.date.matches('[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9][.][0-9]{3}Z');
+    }
+
+    // Personal data: retain the existing owner-only access, including the user document.
+    match /users/{userId}/{document=**} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+    }
+
+    // Legacy season stays readable. The current client only writes rankings_v2.
+    match /rankings/{entryId} {
+      allow read: if true;
+      allow create, update, delete: if false;
+    }
+
+    match /rankings_v2/{entryId} {
+      allow read: if true;
+      allow create: if signedIn() && validRanking(entryId);
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.stage == resource.data.stage
+        && request.resource.data.diff == resource.data.diff
+        && validRanking(entryId);
+      // The game does not offer ranking deletion. Preserve the existing denial.
+      allow delete: if false;
+    }
+
+    // Submission structure validation is the next TODO item.
+    match /submissions/{subId} {
+      allow create: if signedIn()
+        && request.auth.uid == request.resource.data.uid
+        && request.resource.data.status == 'pending';
+      allow read, update: if isAdmin();
+    }
+
+    match /published_stages/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
